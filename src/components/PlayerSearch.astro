@@ -1,0 +1,18 @@
+---
+const { placeholder = "Enter Bungie Name (e.g. Player#1234)" } = Astro.props;
+---
+<form id="playerSearch" style="display:flex; gap:10px; margin-top:12px;">
+  <input type="text" id="bn" placeholder={placeholder} />
+  <button class="btn primary" type="submit">Search</button>
+</form>
+
+<script type="module">
+  const form = document.querySelector('#playerSearch');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const bn = document.querySelector('#bn').value.trim();
+    if(!bn) return;
+    const encoded = encodeURIComponent(bn);
+    window.location.href = `/profile/${encoded}`;
+  });
+</script>

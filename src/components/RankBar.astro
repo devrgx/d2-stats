@@ -1,0 +1,14 @@
+---
+interface Props { label: string; current: number; max: number; }
+const { label, current, max } = Astro.props as Props;
+const pct = Math.max(0, Math.min(100, Math.round((current / max) * 100)));
+---
+<div class="rankbar card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <strong>{label}</strong>
+    <span class="muted">{current} / {max} ({pct}%)</span>
+  </div>
+  <div class="rankbar-track">
+    <div class="rankbar-fill" style={`width:${pct}%`}></div>
+  </div>
+</div>

@@ -1,0 +1,8 @@
+---
+interface Props { label: string; value?: string | number; }
+const { label, value='—' } = Astro.props as Props;
+---
+<div class="kpi">
+  <span class="label">{label}</span>
+  <span class="value">{value}</span>
+</div>

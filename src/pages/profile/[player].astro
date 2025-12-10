@@ -1,0 +1,64 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import StatBlock from "../../components/StatBlock.astro";
+import RankBar from "../../components/RankBar.astro";
+import SocialIcons from "../../components/SocialIcons.astro";
+
+export const prerender = false;
+const { player } = Astro.params;
+
+// Placeholder: later fetch from API, e.g. http://localhost:5100/stats/:player
+const playerName = decodeURIComponent(player);
+
+const socials = {
+  twitch: { url: "#", label: "example_ttv" },
+  youtube: { url: "#", label: "ExampleYT" },
+  steam: { url: "#", label: "ExampleSteam" }
+};
+
+const trials = {
+  weeklyKD: "—",
+  seasonalKD: "—",
+  flawlessCount: "—",
+  flawlessThisWeek: "—"
+};
+
+const crucible = {
+  kd: "—",
+  kills: "—",
+  deaths: "—"
+};
+
+const comp = { rankLabel: "Glorious", current: 0, max: 5500 };
+---
+<Layout title={`${playerName} — CruciCore`}>
+  <header class="profile-header">
+    <div>
+      <h1 style="margin:0">{playerName}</h1>
+      <div class="muted" style="font-size:12px">Platform: — • Membership: —</div>
+    </div>
+    <SocialIcons socials={socials} />
+  </header>
+
+  <section style="margin-top:10px;">
+    <h2>Trials of Osiris</h2>
+    <div class="grid">
+      <div class="col-3"><StatBlock label="Weekly KD" value={trials.weeklyKD} /></div>
+      <div class="col-3"><StatBlock label="Seasonal KD" value={trials.seasonalKD} /></div>
+      <div class="col-3"><StatBlock label="Flawless Count" value={trials.flawlessCount} /></div>
+      <div class="col-3"><StatBlock label="Flawless this week" value={trials.flawlessThisWeek} /></div>
+    </div>
+  </section>
+
+  <section style="margin-top:18px;">
+    <h2>Competitive / Crucible</h2>
+    <div class="grid">
+      <div class="col-4"><StatBlock label="Overall KD" value={crucible.kd} /></div>
+      <div class="col-4"><StatBlock label="Kills" value={crucible.kills} /></div>
+      <div class="col-4"><StatBlock label="Deaths" value={crucible.deaths} /></div>
+    </div>
+    <div style="margin-top:12px;">
+      <RankBar label={`${comp.rankLabel} Rank Progress`} current={comp.current} max={comp.max} />
+    </div>
+  </section>
+</Layout>
