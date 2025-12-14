@@ -1,0 +1,167 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@500;600&display=swap");
+
+/* =====================
+   BASE BADGE STYLING
+   ===================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 26, 36, 0.85);
+  color: #e6edf3;
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  position: relative;
+  cursor: default;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.badge img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+/* Glühender Hover-Effekt */
+.badge:hover {
+  box-shadow: 0 0 12px rgba(0, 209, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* =====================
+   TOOLTIP SYSTEM
+   ===================== */
+.badge[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(15, 20, 28, 0.95);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  opacity: 0;
+  animation: fadeInTooltip 0.25s ease forwards;
+}
+
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -10px);
+  }
+}
+
+/* =====================
+   BADGE VARIANTS
+   ===================== */
+
+/* Default neutral */
+.badge.default {
+  background: rgba(25, 32, 44, 0.85);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* === Admin Badge === */
+.badge.admin {
+  background: linear-gradient(90deg, #ff004d, #ff6b81);
+  color: #fff;
+  border-color: #ffb0c5;
+  box-shadow: 0 0 12px rgba(255, 70, 110, 0.25);
+}
+.badge.admin img {
+  filter: brightness(1.1);
+}
+
+/* === Helper Badge === */
+.badge.helper {
+  background: linear-gradient(90deg, #00b7ff, #0077ff);
+  color: #fff;
+  border-color: #61c9ff;
+  box-shadow: 0 0 10px rgba(0, 183, 255, 0.25);
+}
+
+/* === Flawless Badge === */
+.badge.flawless {
+  background: linear-gradient(90deg, #f7c945, #ffdd80);
+  color: #1a1a1a;
+  font-weight: 700;
+  border-color: #f5d97a;
+  box-shadow: 0 0 10px rgba(247, 201, 69, 0.3);
+}
+
+/* === Champion Badge === */
+.badge.champion {
+  background: linear-gradient(90deg, #0040ff, #00bfff);
+  color: #fff;
+  border-color: #007cff;
+  box-shadow: 0 0 10px rgba(0, 130, 255, 0.3);
+}
+
+/* === Community Badge === */
+.badge.community {
+  background: linear-gradient(90deg, #9b59ff, #b36bff);
+  color: #fff;
+  border-color: #b985ff;
+  box-shadow: 0 0 10px rgba(155, 89, 255, 0.35);
+}
+
+/* === Powerful Friend Badge === */
+.badge.friend {
+  background: linear-gradient(90deg, #ff8aff, #e645ff);
+  color: #fff;
+  border-color: #f7b2ff;
+  box-shadow: 0 0 10px rgba(255, 138, 255, 0.35);
+}
+
+/* === Seasonal Badge (z. B. für aktuelle Season) === */
+.badge.seasonal {
+  background: linear-gradient(90deg, #00d1ff, #9b59ff);
+  border-color: #8a66ff;
+  box-shadow: 0 0 12px rgba(0, 209, 255, 0.25);
+}
+
+/* === Iron Banner / PVP Event === */
+.badge.banner {
+  background: linear-gradient(90deg, #f4511e, #ffb300);
+  color: #1a1a1a;
+  font-weight: 700;
+  border-color: #ffb84d;
+}
+
+/* Hover intensiver leuchten */
+.badge.admin:hover,
+.badge.helper:hover,
+.badge.flawless:hover,
+.badge.community:hover,
+.badge.friend:hover,
+.badge.banner:hover,
+.badge.champion:hover,
+.badge.seasonal:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.1);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.25);
+}
+
+/* =====================
+   LAYOUT GROUP
+   ===================== */
+.badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}

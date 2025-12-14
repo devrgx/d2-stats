@@ -1,0 +1,249 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap");
+
+:root {
+  --bg: #0b0d12;
+  --surface: rgba(21, 26, 34, 0.8);
+  --surface-alt: rgba(28, 34, 44, 0.9);
+  --accent: #00d1ff;
+  --accent-alt: #9b59ff;
+  --accent-gold: #f7c945;
+  --text: #e6edf3;
+  --muted: #9ba9bb;
+  --border: #28364a;
+  --radius: 16px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --font-heading: "Rajdhani", "Orbitron", sans-serif;
+}
+
+/* ===================== RESET & BASE ===================== */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(800px 500px at 20% 15%, rgba(0, 209, 255, 0.045), transparent 80%),
+    radial-gradient(800px 500px at 80% 35%, rgba(155, 89, 255, 0.04), transparent 80%),
+    radial-gradient(900px 600px at 50% 120%, rgba(247, 201, 69, 0.03), transparent 85%),
+    var(--bg);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-color: var(--bg);
+  padding-top: 68px; /* Platz für fixierten Header */
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.15), transparent 60%);
+  z-index: -1;
+}
+
+/* ===================== HEADER (TOP FIXED) ===================== */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 36px;
+  height: 68px;
+
+  background: linear-gradient(110deg, #0b0d12 0%, #151a22 40%, #1c2230 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s ease;
+}
+
+.header.scrolled {
+  background: linear-gradient(110deg, #0a0f18 0%, #121822 100%);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+}
+
+/* === Brand === */
+.brand-solid {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 1.8rem;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-alt) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 12px rgba(0, 209, 255, 0.25);
+  user-select: none;
+}
+.brand-solid span {
+  background: linear-gradient(90deg, var(--accent-alt) 0%, var(--accent-gold) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* === Nav Links === */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.nav-link {
+  color: var(--text);
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  position: relative;
+  transition: color 0.25s ease;
+  font-weight: 600;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+  transition: width 0.25s ease;
+}
+.nav-link:hover {
+  color: var(--accent);
+}
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* ===================== GRID & CONTAINERS ===================== */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.col-12 { grid-column: span 12; }
+.col-6 { grid-column: span 6; }
+.col-4 { grid-column: span 4; }
+.col-3 { grid-column: span 3; }
+
+/* ===================== CARD ===================== */
+.card {
+  background: rgba(18, 22, 30, 0.7);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0.5px rgba(255, 255, 255, 0.15),
+              0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  padding: 20px;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.15);
+}
+
+/* ===================== HERO ===================== */
+.hero {
+  position: relative;
+  background: radial-gradient(circle at 30% 40%, rgba(0, 209, 255, 0.08), transparent 60%),
+              radial-gradient(circle at 70% 60%, rgba(155, 89, 255, 0.08), transparent 70%),
+              rgba(16, 20, 28, 0.9);
+  border-radius: var(--radius);
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0.5px rgba(255, 255, 255, 0.1),
+              0 10px 25px rgba(0, 0, 0, 0.5);
+}
+.hero h1 {
+  margin: 0 0 12px 0;
+  font-size: 28px;
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(0, 209, 255, 0.3);
+}
+.muted { color: var(--muted); }
+
+/* ===================== BUTTONS ===================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.btn.primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+  color: #0a0c10;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 12px rgba(0, 209, 255, 0.3);
+}
+.btn.primary:hover {
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+/* ===================== STAT BLOCKS ===================== */
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.kpi .label {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.kpi .value {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* ===================== FOOTER ===================== */
+.footer {
+  position: relative;
+  background: #0b0d12;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 28px 0 36px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+}
+
+/* ===================== LEGACY CLEANUP ===================== */
+.container-full,
+.player-banner,
+.banner-overlay {
+  all: unset;
+}

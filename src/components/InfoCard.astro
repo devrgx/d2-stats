@@ -1,0 +1,13 @@
+---
+interface Props { title: string; value?: string; hint?: string; }
+const { title, value='—', hint } = Astro.props as Props;
+---
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <div>
+      <div style="font-weight:700">{title}</div>
+      <div class="muted" style="font-size:12px">{hint}</div>
+    </div>
+    <span class="pill">{value}</span>
+  </div>
+</div>

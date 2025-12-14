@@ -1,0 +1,124 @@
+---
+import "../styles/global.css";
+---
+
+<div class="player-search">
+  <input
+    id="playerSearchInput"
+    type="text"
+    placeholder="Enter Bungie Name (e.g. rgx#2117)"
+    autocomplete="off"
+  />
+  <div id="playerResults" class="results"></div>
+</div>
+
+<script type="module">
+  const input = document.getElementById("playerSearchInput");
+  const results = document.getElementById("playerResults");
+
+  let timeout;
+
+  if (input && results) {
+    input.addEventListener("input", () => {
+      if (timeout) clearTimeout(timeout);
+      const query = input.value.trim();
+
+      if (query.length < 2) {
+        results.style.display = "none";
+        return;
+      }
+
+      timeout = setTimeout(async () => {
+        try {
+          const res = await fetch("/api/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query }),
+          });
+
+          const data = await res.json();
+          results.innerHTML = "";
+
+          if (!data || data.length === 0) {
+            results.innerHTML =
+              '<div class="result muted">No results found</div>';
+          } else {
+            data.forEach((p) => {
+              const el = document.createElement("div");
+              el.className = "result";
+              el.textContent = `${p.displayName}`;
+              el.addEventListener("click", () => {
+                window.location.href = `/profile/${p.membershipId}`;
+              });
+              results.appendChild(el);
+            });
+          }
+
+          results.style.display = "block";
+        } catch (err) {
+          console.error("Search error:", err);
+        }
+      }, 400);
+    });
+
+    // Klick außerhalb → Ergebnisliste ausblenden
+    document.addEventListener("click", (e) => {
+      if (
+        results &&
+        input &&
+        !results.contains(e.target) &&
+        e.target !== input
+      ) {
+        results.style.display = "none";
+      }
+    });
+  }
+</script>
+
+<style>
+.player-search {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.player-search input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.player-search input:focus {
+  border-color: var(--accent);
+}
+
+.results {
+  position: absolute;
+  top: calc(100% + 6px);
+  width: 100%;
+  background: var(--surface-alt);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  display: none;
+  z-index: 20;
+}
+
+.result {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.result:hover {
+  background: rgba(0, 209, 255, 0.08);
+}
+</style>

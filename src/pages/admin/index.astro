@@ -1,0 +1,157 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+export const prerender = false;
+
+const title = "Admin Panel — CruciCore";
+---
+
+<Layout {title}>
+  <section class="card">
+    <h1>Admin Panel</h1>
+    <p class="muted">
+      Manage current Trials map, loot, and player badges.
+      (This is a local admin page — data changes are not yet persisted.)
+    </p>
+
+    <form id="adminForm" class="admin-form">
+      <h2>Trials Rotation</h2>
+
+      <div class="form-group">
+        <label for="mapInput">Trials Map</label>
+        <input type="text" id="mapInput" placeholder="e.g. Javelin-4" />
+      </div>
+
+      <div class="form-group">
+        <label for="lootInput">Loot (Adept)</label>
+        <input type="text" id="lootInput" placeholder="e.g. Messenger" />
+      </div>
+
+      <h2>Badges</h2>
+
+      <div class="form-group">
+        <label for="badgeName">Badge Name</label>
+        <input type="text" id="badgeName" placeholder="e.g. Admin" />
+      </div>
+
+      <div class="form-group">
+        <label for="badgeDesc">Description (on hover)</label>
+        <input type="text" id="badgeDesc" placeholder="e.g. Site Administrator" />
+      </div>
+
+      <div class="form-group">
+        <label for="badgeColor">Color</label>
+        <input type="color" id="badgeColor" value="#00d1ff" />
+      </div>
+
+      <button type="button" class="btn primary" id="saveBtn">Save</button>
+    </form>
+
+    <div id="previewArea" class="preview">
+      <h3>Preview</h3>
+      <div id="badgePreview" class="badge">Example</div>
+    </div>
+  </section>
+
+  <script type="module">
+    const mapInput = document.getElementById("mapInput");
+    const lootInput = document.getElementById("lootInput");
+    const badgeName = document.getElementById("badgeName");
+    const badgeDesc = document.getElementById("badgeDesc");
+    const badgeColor = document.getElementById("badgeColor");
+    const badgePreview = document.getElementById("badgePreview");
+    const saveBtn = document.getElementById("saveBtn");
+
+    // Live-Vorschau der Badge
+    if (badgeName && badgePreview && badgeColor) {
+      badgeName.addEventListener("input", () => {
+        badgePreview.textContent = badgeName.value || "Example";
+      });
+      badgeColor.addEventListener("input", () => {
+        badgePreview.style.background = badgeColor.value;
+      });
+    }
+
+    // Simulierter Speichern-Button
+    if (saveBtn) {
+      saveBtn.addEventListener("click", () => {
+        const data = {
+          trialsMap: mapInput?.value,
+          trialsLoot: lootInput?.value,
+          badge: {
+            name: badgeName?.value,
+            desc: badgeDesc?.value,
+            color: badgeColor?.value
+          }
+        };
+        console.log("Admin Save:", data);
+        alert("Settings saved locally (no DB yet).");
+      });
+    }
+  </script>
+
+  <style>
+    .admin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    input[type="text"],
+    input[type="color"] {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      margin-top: 12px;
+      align-self: flex-start;
+    }
+
+    .preview {
+      margin-top: 30px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-alt);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #000;
+      cursor: default;
+      transition: transform 0.2s ease;
+    }
+
+    .badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 10px rgba(0, 209, 255, 0.4);
+    }
+  </style>
+</Layout>

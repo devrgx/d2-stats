@@ -1,0 +1,21 @@
+---
+interface Props {
+  socials?: {
+    twitch?: { url: string; label: string };
+    youtube?: { url: string; label: string };
+    steam?: { url: string; label: string };
+  };
+}
+const { socials = {} } = Astro.props as Props;
+---
+<div class="socials">
+  {socials.twitch && (
+    <a class="icon" href={socials.twitch.url} title={`Twitch: ${socials.twitch.label}`} target="_blank" rel="noreferrer">T</a>
+  )}
+  {socials.youtube && (
+    <a class="icon" href={socials.youtube.url} title={`YouTube: ${socials.youtube.label}`} target="_blank" rel="noreferrer">Y</a>
+  )}
+  {socials.steam && (
+    <a class="icon" href={socials.steam.url} title={`Steam: ${socials.steam.label}`} target="_blank" rel="noreferrer">S</a>
+  )}
+</div>

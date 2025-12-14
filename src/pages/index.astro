@@ -1,0 +1,41 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PlayerSearch from "../components/PlayerSearch.astro";
+import InfoCard from "../components/InfoCard.astro";
+import StatBlock from "../components/StatBlock.astro";
+const title = "CruciCore — PvP & Trials Stats";
+// Placeholder values; later you can fetch from your API http://localhost:5100
+const trialsMap = "—"; // e.g., Burnout
+const trialsLoot = "—"; // e.g., Messenger (Adept)
+const pvpRotator = "—"; // e.g., Momentum Control
+---
+<Layout {title}>
+  <section class="hero card">
+    <h1>Destiny 2 PvP & Trials Tracker</h1>
+    <p class="muted">Search any guardian by Bungie Name (e.g., Player#1234). Weekly Trials, seasonal PvP, Comp rank & more.</p>
+    <PlayerSearch />
+  </section>
+
+  <section style="margin-top:18px;">
+    <h2>Now in Rotation</h2>
+    <div class="grid">
+      <div class="col-4"><InfoCard title="Trials Map" value={trialsMap} hint="Current weekend"/></div>
+      <div class="col-4"><InfoCard title="Trials Loot" value={trialsLoot} hint="Adept (if Flawless)"/></div>
+      <div class="col-4"><InfoCard title="Crucible Rotator" value={pvpRotator} hint="Weekly playlist"/></div>
+    </div>
+  </section>
+
+  <section style="margin-top:18px;">
+    <h2>Last 24 Hours</h2>
+    <div class="grid">
+      <div class="col-4"><StatBlock label="Games Played" value="—" /></div>
+      <div class="col-4"><StatBlock label="Average KD" value="—" /></div>
+      <div class="col-4"><StatBlock label="Top Map" value="—" /></div>
+    </div>
+  </section>
+
+  <section class="blurred" style="margin-top:18px;">
+    <h2>Challenges (coming soon)</h2>
+    <p class="muted">Seasonal goals, Trials bounties, and curated milestones will appear here.</p>
+  </section>
+</Layout>

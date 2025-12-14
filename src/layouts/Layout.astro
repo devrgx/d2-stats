@@ -1,0 +1,49 @@
+---
+import "../styles/global.css";
+import "../styles/Player.css"
+const cookies = Astro.request.headers.get("cookie");
+let user = null;
+try {
+  const match = cookies?.match(/bungie=([^;]+)/);
+  if (match) user = JSON.parse(decodeURIComponent(match[1]));
+} catch {}
+const { title = "CruciCore — Destiny 2 PvP & Trials Tracker" } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <!-- Fixierter Header -->
+    <nav class="header">
+      <div class="header-left">
+        <a href="/" class="brand-link">
+          <div class="brand-solid">Cruci<span>Core</span></div>
+        </a>
+      </div>
+      <div class="header-right">
+        <a class="nav-link" href="/about">About</a>
+        {
+          user ? (
+            <>
+              <a class="btn" href={`/profile/${user.membershipId}`}>
+                {user.displayName}
+              </a>
+              <a class="btn" href="/api/auth/logout">Logout</a>
+            </>
+          ) : (
+            <a class="btn primary" href="/api/auth/login">
+              Sign in with Bungie
+            </a>
+          )
+        }
+      </div>
+    </nav>
+
+    <!-- Slot direkt hier -->
+    <slot />
+  </body>
+</html>
