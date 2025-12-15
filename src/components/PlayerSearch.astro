@@ -15,12 +15,11 @@ import "../styles/global.css";
 <script type="module">
   const input = document.getElementById("playerSearchInput");
   const results = document.getElementById("playerResults");
-
   let timeout;
 
   if (input && results) {
     input.addEventListener("input", () => {
-      if (timeout) clearTimeout(timeout);
+      clearTimeout(timeout);
       const query = input.value.trim();
 
       if (query.length < 2) {
@@ -39,16 +38,24 @@ import "../styles/global.css";
           const data = await res.json();
           results.innerHTML = "";
 
-          if (!data || data.length === 0) {
+          if (!Array.isArray(data) || data.length === 0) {
             results.innerHTML =
               '<div class="result muted">No results found</div>';
           } else {
             data.forEach((p) => {
               const el = document.createElement("div");
               el.className = "result";
-              el.textContent = `${p.displayName}`;
+              // Hier KEINE Template-Literals im HTML → esbuild-Bug umgehen:
+              const platform = platformName(p.membershipType);
+              el.innerHTML =
+                "<strong>" +
+                p.displayName +
+                "</strong><span style='opacity:0.6;margin-left:6px;'>(" +
+                platform +
+                ")</span>";
               el.addEventListener("click", () => {
-                window.location.href = `/profile/${p.membershipId}`;
+                window.location.href =
+                  "/player/" + p.membershipType + "/" + p.membershipId;
               });
               results.appendChild(el);
             });
@@ -61,17 +68,22 @@ import "../styles/global.css";
       }, 400);
     });
 
-    // Klick außerhalb → Ergebnisliste ausblenden
     document.addEventListener("click", (e) => {
-      if (
-        results &&
-        input &&
-        !results.contains(e.target) &&
-        e.target !== input
-      ) {
+      if (!results.contains(e.target) && e.target !== input) {
         results.style.display = "none";
       }
     });
+  }
+
+  function platformName(type) {
+    switch (type) {
+      case 1: return "Xbox";
+      case 2: return "PlayStation";
+      case 3: return "Steam/Epic";
+      case 4: return "Blizzard";
+      case 5: return "Stadia";
+      default: return "CrossSave";
+    }
   }
 </script>
 
@@ -116,6 +128,9 @@ import "../styles/global.css";
   padding: 10px 12px;
   cursor: pointer;
   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .result:hover {

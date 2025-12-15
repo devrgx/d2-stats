@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request }) => {
       {
         method: "POST",
         headers: {
-          "X-API-Key": import.meta.env.PUBLIC_BUNGIE_API_KEY,
+          "X-API-Key": import.meta.env.BUNGIE_API_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ displayName, displayNameCode }),
