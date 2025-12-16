@@ -1,0 +1,80 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { APP_VERSION, APP_STATUS } from "../config/version";
+import "../styles/help.css";
+---
+
+<Layout title="Help · CruciCore">
+    <section class="help-container">
+        <h1>Help & Information</h1>
+        <p>
+            CruciCore is currently under active development. Below you can find
+            important information about the project.
+        </p>
+
+        <div class="help-grid">
+            <!-- ===== TOP ROW (3 BOXES) ===== -->
+
+            <div class="help-box">
+                <h3>🚧 Development Status</h3>
+                <p>
+                    CruciCore is currently in an early development phase.
+                    Features may change or break at any time.
+                </p>
+                <div class="help-meta">
+                    <strong>Version: v{APP_VERSION}</strong>
+                    <span>{APP_STATUS}</span>
+                </div>
+            </div>
+
+            <div class="help-box">
+                <h3>📊 Data & Accuracy</h3>
+                <p>
+                    Stats are fetched from the official Bungie API. Temporary
+                    delays or inconsistencies may occur.
+                </p>
+                <small>Live data · No caching guarantees</small>
+            </div>
+
+            <div class="help-box">
+                <h3>🤖 Discord Bot (Coming Soon)</h3>
+                <p>
+                    A Discord bot is planned to provide quick PvP stats, Trials
+                    insights and account lookups.
+                </p>
+                <small>Planned feature · Not available yet</small>
+            </div>
+
+            <!-- ===== BOTTOM ROW (CENTERED) ===== -->
+
+            <div class="help-row-center">
+                <div class="help-box">
+                    <h3>💬 Support & Feedback</h3>
+                    <p>
+                        Found a bug or missing feature? Feedback is highly
+                        appreciated during the preview phase.
+                    </p>
+
+                    <div class="help-meta">
+                        <a
+                            href="https://discord.gg/DtGfWFBZ5w"
+                            target="_blank"
+                            class="help-discord"
+                        >
+                            Contact via Discord
+                        </a>
+                    </div>
+                </div>
+
+                <div class="help-box">
+                    <h3>📡 Service Status</h3>
+                    <p>
+                        All services are currently operational. API limits or
+                        maintenance may occur without notice.
+                    </p>
+                    <small>Status updates will be posted on Discord</small>
+                </div>
+            </div>
+        </div>
+    </section>
+</Layout>

@@ -168,3 +168,11 @@
     font-size: 15px;
   }
 }
+
+.profile-badges {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 10px;
+  vertical-align: middle;
+  flex-wrap: wrap;
+}

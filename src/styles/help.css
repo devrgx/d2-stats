@@ -1,0 +1,169 @@
+/* ===================== HELP LAYOUT ===================== */
+
+.help-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.help-intro {
+  opacity: 0.8;
+  margin-bottom: 30px;
+}
+
+/* ===================== GRID ===================== */
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 360px);
+  gap: 24px;
+  justify-content: center;
+}
+
+.help-row-center {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+/* ===================== HELP BOX ===================== */
+
+.help-box {
+  position: relative;
+  width: 360px;
+
+  display: flex;
+  flex-direction: column;
+
+  background: linear-gradient(
+    180deg,
+    rgba(18, 26, 38, 0.95),
+    rgba(12, 18, 28, 0.95)
+  );
+
+  border-radius: 14px;
+  border: 1px solid rgba(120, 190, 255, 0.18);
+  padding: 22px;
+
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+/* === THEME AKZENT (HALB / ECKENBETONT) === */
+
+.help-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  pointer-events: none;
+
+  border: 2px solid transparent;
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent),
+      var(--accent-alt),
+      var(--accent-gold)
+    ) border-box;
+
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+          mask-composite: exclude;
+
+  opacity: 0.55;
+}
+
+/* ===================== HOVER ===================== */
+
+.help-box:hover {
+  transform: translateY(-3px);
+  border-color: rgba(0, 209, 255, 0.85);
+
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.help-box:hover::before {
+  opacity: 0.9;
+  box-shadow:
+    0 0 14px rgba(0, 209, 255, 0.45),
+    0 0 22px rgba(155, 89, 255, 0.35),
+    0 0 30px rgba(247, 201, 69, 0.25);
+}
+
+/* ===================== CONTENT ===================== */
+
+.help-box h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.help-box p {
+  opacity: 0.85;
+  line-height: 1.45;
+}
+
+.help-box small {
+  margin-top: auto;
+  padding-top: 14px;
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  opacity: 0.55;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.help-meta {
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.help-meta strong {
+  font-weight: 600;
+  opacity: 0.85;
+}
+/* ===================== LINKS ===================== */
+
+.help-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.help-link:hover {
+  text-decoration: underline;
+}
+
+.help-discord {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.help-discord:hover {
+  text-decoration: underline;
+}

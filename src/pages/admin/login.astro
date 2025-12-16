@@ -1,24 +1,23 @@
 ---
-import "../../styles/global.css";
-const error = Astro.url.searchParams.get("error");
+import Layout from "../../layouts/Layout.astro";
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Admin Login — CruciCore</title>
-  </head>
-  <body>
-    <div class="container" style="max-width:560px;">
-      <h1>Admin Login</h1>
-      {error && <p class="muted" style="color:#ff6b6b;">Invalid token</p>}
-      <form action="/api/admin/login" method="post" class="card" style="display:flex; gap:12px; flex-direction:column;">
-        <label>
-          <div class="muted" style="margin-bottom:6px;">Admin Token</div>
-          <input type="password" name="token" placeholder="Enter admin token" required />
-        </label>
-        <button class="btn primary" type="submit">Login</button>
-      </form>
-    </div>
-  </body>
-</html>
+<Layout title="Admin Login · CruciCore">
+  <section class="container">
+    <h1>Admin Login</h1>
+
+    <form method="POST" action="/api/admin?action=login">
+      <label>
+        Admin Token
+        <input
+          type="password"
+          name="token"
+          placeholder="Enter admin token"
+          required
+        />
+      </label>
+
+      <button type="submit" class="btn primary"> Login </button>
+    </form>
+  </section>
+</Layout>

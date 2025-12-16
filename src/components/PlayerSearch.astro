@@ -17,74 +17,53 @@ import "../styles/global.css";
   const results = document.getElementById("playerResults");
   let timeout;
 
-  if (input && results) {
-    input.addEventListener("input", () => {
-      clearTimeout(timeout);
-      const query = input.value.trim();
+  input.addEventListener("input", () => {
+    clearTimeout(timeout);
+    const query = input.value.trim();
 
-      if (query.length < 2) {
-        results.style.display = "none";
-        return;
-      }
-
-      timeout = setTimeout(async () => {
-        try {
-          const res = await fetch("/api/search", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query }),
-          });
-
-          const data = await res.json();
-          results.innerHTML = "";
-
-          if (!Array.isArray(data) || data.length === 0) {
-            results.innerHTML =
-              '<div class="result muted">No results found</div>';
-          } else {
-            data.forEach((p) => {
-              const el = document.createElement("div");
-              el.className = "result";
-              // Hier KEINE Template-Literals im HTML → esbuild-Bug umgehen:
-              const platform = platformName(p.membershipType);
-              el.innerHTML =
-                "<strong>" +
-                p.displayName +
-                "</strong><span style='opacity:0.6;margin-left:6px;'>(" +
-                platform +
-                ")</span>";
-              el.addEventListener("click", () => {
-                window.location.href =
-                  "/player/" + p.membershipType + "/" + p.membershipId;
-              });
-              results.appendChild(el);
-            });
-          }
-
-          results.style.display = "block";
-        } catch (err) {
-          console.error("Search error:", err);
-        }
-      }, 400);
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!results.contains(e.target) && e.target !== input) {
-        results.style.display = "none";
-      }
-    });
-  }
-
-  function platformName(type) {
-    switch (type) {
-      case 1: return "Xbox";
-      case 2: return "PlayStation";
-      case 3: return "Steam/Epic";
-      case 4: return "Blizzard";
-      case 5: return "Stadia";
-      default: return "CrossSave";
+    if (query.length < 2) {
+      results.style.display = "none";
+      return;
     }
-  }
+
+    timeout = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+
+        const data = await res.json();
+        results.innerHTML = "";
+
+        if (!data.length) {
+          results.innerHTML =
+            '<div class="result muted">No results found</div>';
+        } else {
+          data.forEach((p) => {
+            const el = document.createElement("div");
+            el.className = "result";
+            el.textContent = p.displayName;
+            el.onclick = () => {
+              window.location.href = `/player/${p.membershipType}/${p.membershipId}`;
+            };
+            results.appendChild(el);
+          });
+        }
+
+        results.style.display = "block";
+      } catch (e) {
+        console.error(e);
+      }
+    }, 350);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!results.contains(e.target) && e.target !== input) {
+      results.style.display = "none";
+    }
+  });
 </script>
 
 <style>

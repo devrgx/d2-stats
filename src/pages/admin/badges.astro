@@ -1,0 +1,70 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { addBadge } from "../../lib/db";
+
+const method = Astro.request.method;
+let message = "";
+
+if (method === "POST") {
+  const form = await Astro.request.formData();
+
+  const player = form.get("player")?.toString();
+  const text = form.get("text")?.toString();
+  const badgeClass = form.get("badge_class")?.toString();
+  const tooltip = form.get("tooltip")?.toString();
+
+  if (player && text && badgeClass) {
+    await addBadge({
+      player_name: player,
+      badge_text: text,
+      badge_class: badgeClass,
+      tooltip,
+    });
+
+    message = "Badge added successfully.";
+  } else {
+    message = "Missing required fields.";
+  }
+}
+---
+
+<Layout title="Admin · Badges">
+  <section class="container">
+    <h1>Badge Administration</h1>
+
+    {message && <p class="muted">{message}</p>}
+
+    <form method="post" style="max-width:480px; margin-top:24px;">
+      <label>
+        Player (Name#Code)
+        <input name="player" placeholder="rgx#2117" required />
+      </label>
+
+      <label>
+        Badge Text
+        <input name="text" placeholder="Developer" required />
+      </label>
+
+      <label>
+        Badge Type
+        <select name="badge_class" required>
+          <option value="dev">Developer</option>
+          <option value="advisor">Advisor</option>
+          <option value="partner">3rd Party Dev</option>
+        </select>
+      </label>
+
+      <label>
+        Tooltip (optional)
+        <textarea
+          name="tooltip"
+          placeholder="This guy is the genius behind all of this"
+        ></textarea>
+      </label>
+
+      <button class="btn primary" type="submit">
+        Add Badge
+      </button>
+    </form>
+  </section>
+</Layout>

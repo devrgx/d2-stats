@@ -1,157 +1,160 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { getSetting } from "../../lib/db";
 
-export const prerender = false;
+/* ===================== ADMIN AUTH ===================== */
 
-const title = "Admin Panel — CruciCore";
+const isAdmin = Astro.cookies.get("cc_admin");
+if (!isAdmin) {
+  return Astro.redirect("/admin/login");
+}
+
+/* ===================== SETTINGS ===================== */
+
+const appVersion = (await getSetting("app_version")) ?? "0.1.0";
+const appStatus = (await getSetting("app_status")) ?? "Early Preview";
+const discordInvite =
+  (await getSetting("discord_invite")) ?? "https://discord.gg/yourlink";
 ---
 
-<Layout {title}>
-  <section class="card">
+<Layout title="Admin Panel · CruciCore">
+  <section class="container">
     <h1>Admin Panel</h1>
-    <p class="muted">
-      Manage current Trials map, loot, and player badges.
-      (This is a local admin page — data changes are not yet persisted.)
-    </p>
 
-    <form id="adminForm" class="admin-form">
-      <h2>Trials Rotation</h2>
+    <!-- ================= SETTINGS ================= -->
+    <h2>Site Settings</h2>
 
-      <div class="form-group">
-        <label for="mapInput">Trials Map</label>
-        <input type="text" id="mapInput" placeholder="e.g. Javelin-4" />
-      </div>
+    <form method="POST" action="/api/admin?action=settings">
+      <label>
+        App Version
+        <input type="text" name="app_version" value={appVersion} />
+      </label>
 
-      <div class="form-group">
-        <label for="lootInput">Loot (Adept)</label>
-        <input type="text" id="lootInput" placeholder="e.g. Messenger" />
-      </div>
+      <label>
+        App Status
+        <input type="text" name="app_status" value={appStatus} />
+      </label>
 
-      <h2>Badges</h2>
+      <label>
+        Discord Invite
+        <input type="text" name="discord_invite" value={discordInvite} />
+      </label>
 
-      <div class="form-group">
-        <label for="badgeName">Badge Name</label>
-        <input type="text" id="badgeName" placeholder="e.g. Admin" />
-      </div>
-
-      <div class="form-group">
-        <label for="badgeDesc">Description (on hover)</label>
-        <input type="text" id="badgeDesc" placeholder="e.g. Site Administrator" />
-      </div>
-
-      <div class="form-group">
-        <label for="badgeColor">Color</label>
-        <input type="color" id="badgeColor" value="#00d1ff" />
-      </div>
-
-      <button type="button" class="btn primary" id="saveBtn">Save</button>
+      <button type="submit" class="btn primary">
+        Save Settings
+      </button>
     </form>
 
-    <div id="previewArea" class="preview">
-      <h3>Preview</h3>
-      <div id="badgePreview" class="badge">Example</div>
-    </div>
+    <hr />
+
+    <!-- ================= TRIALS ================= -->
+    <h2>Trials Rotation</h2>
+
+    <form method="POST" action="/api/trials">
+      <label>
+        Active
+        <input type="checkbox" name="active" />
+      </label>
+
+      <label>
+        Map
+        <input
+          type="text"
+          name="map_name"
+          id="map-input"
+          placeholder="Start typing a PvP map…"
+          autocomplete="off"
+          required
+        />
+      </label>
+
+      <ul id="map-suggestions" class="map-suggestions"></ul>
+
+      <button type="submit" class="btn primary">
+        Update Trials
+      </button>
+    </form>
+
+    <hr />
+
+    <!-- ================= LOGOUT ================= -->
+    <form method="POST" action="/api/admin?action=logout">
+      <button type="submit" class="btn">
+        Logout
+      </button>
+    </form>
   </section>
 
-  <script type="module">
-    const mapInput = document.getElementById("mapInput");
-    const lootInput = document.getElementById("lootInput");
-    const badgeName = document.getElementById("badgeName");
-    const badgeDesc = document.getElementById("badgeDesc");
-    const badgeColor = document.getElementById("badgeColor");
-    const badgePreview = document.getElementById("badgePreview");
-    const saveBtn = document.getElementById("saveBtn");
+  <a href="/admin/badges">Manage Badges</a>
 
-    // Live-Vorschau der Badge
-    if (badgeName && badgePreview && badgeColor) {
-      badgeName.addEventListener("input", () => {
-        badgePreview.textContent = badgeName.value || "Example";
-      });
-      badgeColor.addEventListener("input", () => {
-        badgePreview.style.background = badgeColor.value;
-      });
-    }
+  <!-- ================= MAP AUTOCOMPLETE ================= -->
+  <script>
+    const input = document.getElementById("map-input");
+    const list = document.getElementById("map-suggestions");
 
-    // Simulierter Speichern-Button
-    if (saveBtn) {
-      saveBtn.addEventListener("click", () => {
-        const data = {
-          trialsMap: mapInput?.value,
-          trialsLoot: lootInput?.value,
-          badge: {
-            name: badgeName?.value,
-            desc: badgeDesc?.value,
-            color: badgeColor?.value
-          }
-        };
-        console.log("Admin Save:", data);
-        alert("Settings saved locally (no DB yet).");
+    if (input instanceof HTMLInputElement && list) {
+      let controller: AbortController;
+
+      input.addEventListener("input", async () => {
+        const q = input.value.trim();
+        list.innerHTML = "";
+        if (!q) return;
+
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        const res = await fetch(`/api/maps?q=${encodeURIComponent(q)}`, {
+          signal: controller.signal,
+        });
+
+        const maps = await res.json();
+
+        for (const m of maps) {
+          const li = document.createElement("li");
+          li.textContent = m.name;
+          li.addEventListener("click", () => {
+            input.value = m.name;
+            list.innerHTML = "";
+          });
+          list.appendChild(li);
+        }
       });
     }
   </script>
 
   <style>
-    .admin-form {
+    .map-suggestions {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0;
+      background: rgba(20, 24, 32, 0.95);
+      border: 1px solid rgba(120, 190, 255, 0.18);
+      border-radius: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .map-suggestions li {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .map-suggestions li:hover {
+      background: rgba(0, 209, 255, 0.12);
+    }
+
+    form {
+      margin-bottom: 32px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      margin-top: 10px;
+      gap: 12px;
+      max-width: 420px;
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    input[type="text"],
-    input[type="color"] {
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s ease;
-    }
-
-    input:focus {
-      border-color: var(--accent);
-    }
-
-    .btn {
-      margin-top: 12px;
-      align-self: flex-start;
-    }
-
-    .preview {
-      margin-top: 30px;
-      padding: 20px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface-alt);
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-weight: 600;
-      background: var(--accent);
-      color: #000;
-      cursor: default;
-      transition: transform 0.2s ease;
-    }
-
-    .badge:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 10px rgba(0, 209, 255, 0.4);
+    hr {
+      margin: 40px 0;
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
   </style>
 </Layout>

@@ -1,12 +1,22 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import StatBlock from "../../components/StatBlock.astro";
-import CompRankBars from "../../components/CompRankBars.astro";
+import Layout from "../../../layouts/Layout.astro";
+import StatBlock from "../../../components/StatBlock.astro";
+import CompRankBars from "../../../components/CompRankBars.astro";
+
+import { listBadgesByPlayer } from "../../../lib/db";
+
+let badges: {
+  badge_text: string;
+  tooltip?: string;
+  badge_class?: string;
+}[] = [];
 
 export const prerender = false;
 
-const { player } = Astro.params;
-const membershipType = 3; // 3 = Steam/PC
+const { type, id } = Astro.params;
+
+const membershipType = Number(type);
+const membershipId = id;
 const apiKey = import.meta.env.BUNGIE_API_KEY;
 
 // ===== Standardwerte =====
@@ -30,8 +40,8 @@ const socials = {
 try {
   // 1️⃣ Profil abrufen
   const res = await fetch(
-    `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${player}/?components=100,200,202,900`,
-    { headers: { "X-API-Key": apiKey } }
+    `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=100,200,202,900`,
+    { headers: { "X-API-Key": apiKey } },
   );
   const data = await res.json();
   if (!data?.Response) throw new Error("Invalid Bungie API response");
@@ -67,7 +77,7 @@ try {
     if (firstChar.emblemHash) {
       const manRes = await fetch(
         `https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${firstChar.emblemHash}/`,
-        { headers: { "X-API-Key": apiKey } }
+        { headers: { "X-API-Key": apiKey } },
       );
       const man = await manRes.json();
       const def = man?.Response ?? {};
@@ -81,10 +91,8 @@ try {
   }
 
   // 5️⃣ COMP Punkte (Progression 3696598664)
-  const progressions = (data.Response.characterProgressions?.data ?? {}) as Record<
-    string,
-    { progressions?: Record<string, any> }
-  >;
+  const progressions = (data.Response.characterProgressions?.data ??
+    {}) as Record<string, { progressions?: Record<string, any> }>;
   const firstProg = Object.values(progressions)[0]?.progressions ?? {};
   const compProg = firstProg["3696598664"];
   if (compProg) {
@@ -95,6 +103,16 @@ try {
 } catch (err) {
   console.error("Bungie API Error:", err);
 }
+
+try {
+  badges = await listBadgesByPlayer(playerName);
+} catch (e) {
+  console.warn("Could not load badges:", e);
+}
+
+const badgeKey = bungieTag ? `${playerName}${bungieTag}` : playerName;
+
+badges = await listBadgesByPlayer(badgeKey);
 ---
 
 <Layout title={`${playerName} — CruciCore`}>
@@ -110,11 +128,26 @@ try {
         <h2 class="cc-header__name">
           {playerName}
           <span class="cc-header__tag">{bungieTag}</span>
+
+          {
+            badges.length > 0 && (
+              <span class="profile-badges">
+                {badges.map((badge) => (
+                  <span
+                    class={`badge badge-${badge.badge_class ?? "default"}`}
+                    data-tooltip={badge.tooltip}
+                  >
+                    {badge.badge_text}
+                  </span>
+                ))}
+              </span>
+            )
+          }
         </h2>
         <div class="cc-header__meta">
           <span>{clanName}</span>
           <span>• Platform: Steam</span>
-          <span>• Membership ID: {player}</span>
+          <span>• Membership ID: {membershipId}</span>
         </div>
       </div>
     </div>
@@ -128,7 +161,9 @@ try {
         <div class="col-3"><StatBlock label="Weekly KD" value="—" /></div>
         <div class="col-3"><StatBlock label="Seasonal KD" value="—" /></div>
         <div class="col-3"><StatBlock label="Flawless Count" value="—" /></div>
-        <div class="col-3"><StatBlock label="Flawless this week" value="—" /></div>
+        <div class="col-3">
+          <StatBlock label="Flawless this week" value="—" />
+        </div>
       </div>
     </section>
 
