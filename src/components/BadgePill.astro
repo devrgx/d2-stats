@@ -1,0 +1,70 @@
+---
+import type { BadgeKey } from "../constants/badges";
+import { BADGES } from "../constants/badges";
+
+type Props = {
+  badge: BadgeKey;
+  compact?: boolean;
+};
+
+const { badge, compact = false } = Astro.props;
+const meta = BADGES[badge];
+if (!meta) throw new Error(`Unknown badge key: ${badge}`);
+
+const icon = (() => {
+  // Minimal, dependency-free icons (ASCII-ish). Replace later if you want Lucide.
+  switch (meta.icon) {
+    case "code": return "</>";
+    case "bulb": return "💡";
+    case "link": return "🔗";
+    case "shield": return "🛡️";
+    case "check": return "✔";
+    default: return "•";
+  }
+})();
+---
+
+<span
+  class={`badge-pill ${compact ? "compact" : ""}`}
+  style={`--badge:${meta.color};`}
+  title={meta.description}
+>
+  <span class="badge-icon" aria-hidden="true">{icon}</span>
+  <span class="badge-label">{meta.label}</span>
+</span>
+
+<style>
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--badge) 65%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--badge) 10%, transparent),
+      rgba(255,255,255,0.02)
+    );
+    color: rgba(255,255,255,0.92);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .badge-pill.compact {
+    padding: 5px 8px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .badge-icon {
+    font-weight: 700;
+    opacity: 0.95;
+  }
+
+  .badge-label {
+    font-weight: 600;
+    letter-spacing: 0.1px;
+  }
+</style>

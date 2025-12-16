@@ -28,6 +28,7 @@ let emblemIcon = "/missing_emblem_icon.png";
 let compPoints = 0;
 let compProgressToNext = 0;
 let compNextLevelAt = 0;
+let isLoading = true;
 
 // ===== Socials (Platzhalter) =====
 const socials = {
@@ -100,6 +101,7 @@ try {
     compProgressToNext = compProg.progressToNextLevel ?? 0;
     compNextLevelAt = compProg.nextLevelAt ?? 0;
   }
+  isLoading = false;
 } catch (err) {
   console.error("Bungie API Error:", err);
 }
@@ -119,37 +121,53 @@ badges = await listBadgesByPlayer(badgeKey);
   <!-- Emblem Header -->
   <section
     class="cc-header"
-    style={`background-image:url('${emblemBackground}')`}
+    style={!isLoading ? `background-image:url('${emblemBackground}')` : ""}
   >
     <div class="cc-header__scrim"></div>
-    <div class="cc-header__inner">
-      <img src={emblemIcon} alt="Emblem" class="cc-header__icon" />
-      <div class="cc-header__info">
-        <h2 class="cc-header__name">
-          {playerName}
-          <span class="cc-header__tag">{bungieTag}</span>
 
-          {
-            badges.length > 0 && (
-              <span class="profile-badges">
-                {badges.map((badge) => (
-                  <span
-                    class={`badge badge-${badge.badge_class ?? "default"}`}
-                    data-tooltip={badge.tooltip}
-                  >
-                    {badge.badge_text}
+    <div class="cc-header__inner">
+      {
+        isLoading ? (
+          <>
+            <div class="cc-header__icon skeleton skeleton-avatar" />
+
+            <div class="cc-header__info">
+              <div class="skeleton skeleton-line title" />
+              <div class="skeleton skeleton-line small" />
+            </div>
+          </>
+        ) : (
+          <>
+            <img src={emblemIcon} alt="Emblem" class="cc-header__icon" />
+
+            <div class="cc-header__info">
+              <h2 class="cc-header__name">
+                {playerName}
+                <span class="cc-header__tag">{bungieTag}</span>
+
+                {badges.length > 0 && (
+                  <span class="profile-badges">
+                    {badges.map((badge) => (
+                      <span
+                        class={`badge badge-${badge.badge_class ?? "default"}`}
+                        data-tooltip={badge.tooltip}
+                      >
+                        {badge.badge_text}
+                      </span>
+                    ))}
                   </span>
-                ))}
-              </span>
-            )
-          }
-        </h2>
-        <div class="cc-header__meta">
-          <span>{clanName}</span>
-          <span>• Platform: Steam</span>
-          <span>• Membership ID: {membershipId}</span>
-        </div>
-      </div>
+                )}
+              </h2>
+
+              <div class="cc-header__meta">
+                <span>{clanName}</span>
+                <span>• Platform: Steam</span>
+                <span>• Membership ID: {membershipId}</span>
+              </div>
+            </div>
+          </>
+        )
+      }
     </div>
   </section>
 
@@ -157,31 +175,73 @@ badges = await listBadgesByPlayer(badgeKey);
   <main class="container">
     <section style="margin-top:32px;">
       <h2>Trials of Osiris</h2>
+
       <div class="grid">
-        <div class="col-3"><StatBlock label="Weekly KD" value="—" /></div>
-        <div class="col-3"><StatBlock label="Seasonal KD" value="—" /></div>
-        <div class="col-3"><StatBlock label="Flawless Count" value="—" /></div>
-        <div class="col-3">
-          <StatBlock label="Flawless this week" value="—" />
-        </div>
+        {
+          isLoading ? (
+            Array.from({ length: 4 }).map(() => (
+              <div class="col-3">
+                <div class="skeleton skeleton-card" />
+              </div>
+            ))
+          ) : (
+            <>
+              <div class="col-3">
+                <StatBlock label="Weekly KD" value="—" />
+              </div>
+              <div class="col-3">
+                <StatBlock label="Seasonal KD" value="—" />
+              </div>
+              <div class="col-3">
+                <StatBlock label="Flawless Count" value="—" />
+              </div>
+              <div class="col-3">
+                <StatBlock label="Flawless this week" value="—" />
+              </div>
+            </>
+          )
+        }
       </div>
     </section>
 
     <section style="margin-top:18px;">
       <h2>Competitive / Crucible</h2>
+
       <div class="grid">
-        <div class="col-4"><StatBlock label="Overall KD" value="—" /></div>
-        <div class="col-4"><StatBlock label="Kills" value="—" /></div>
-        <div class="col-4"><StatBlock label="Deaths" value="—" /></div>
+        {
+          isLoading ? (
+            Array.from({ length: 3 }).map(() => (
+              <div class="col-4">
+                <div class="skeleton skeleton-card" />
+              </div>
+            ))
+          ) : (
+            <>
+              <div class="col-4">
+                <StatBlock label="Overall KD" value="—" />
+              </div>
+              <div class="col-4">
+                <StatBlock label="Kills" value="—" />
+              </div>
+              <div class="col-4">
+                <StatBlock label="Deaths" value="—" />
+              </div>
+            </>
+          )
+        }
       </div>
 
-      <div style="margin-top:20px;">
-        <CompRankBars
-          points={compPoints}
-          nextLevelAt={compNextLevelAt}
-          toNext={compProgressToNext}
-        />
-      </div>
+      {
+        !isLoading && (
+          <div style="margin-top:20px;">
+            <CompRankBars
+              points={compPoints}
+              nextLevelAt={compNextLevelAt}
+              toNext={compProgressToNext}
+            />
+          </div>
+        )
+      }
     </section>
   </main>
 </Layout>

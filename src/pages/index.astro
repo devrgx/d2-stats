@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+export const prerender = false;
 ---
 
 <Layout title="CruciCore — Destiny 2 PvP & Trials Tracker">
@@ -29,7 +30,11 @@ import Layout from "../layouts/Layout.astro";
       </div>
 
       <div class="hero-meta">
-        <span class="status-badge" data-tooltip="CruciCore is currently in early development. Features may change or break.">Early Preview</span>
+        <span
+          class="status-badge"
+          data-tooltip="CruciCore is currently in early development. Features may change or break."
+          >Early Preview</span
+        >
       </div>
     </div>
   </section>
@@ -95,3 +100,85 @@ import Layout from "../layouts/Layout.astro";
     </p>
   </section>
 </Layout>
+
+<script>
+  const input = document.querySelector(".hero-input") as HTMLInputElement;
+  const list = document.querySelector(".search-suggestions") as HTMLElement;
+
+  let abortCtrl: AbortController;
+
+  function dedupeByName(results: any) {
+    const map = new Map();
+    for (const r of results) {
+      if (!map.has(r.displayName)) {
+        map.set(r.displayName, r);
+      }
+    }
+    return Array.from(map.values());
+  }
+
+  input.addEventListener("input", async () => {
+    const q = input.value.trim();
+
+    if (q.length < 2) {
+      list.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
+
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: q }),
+        signal: abortCtrl.signal,
+      });
+
+      const data = await res.json();
+      const results = dedupeByName(data);
+
+      if (!results.length) {
+        list.hidden = true;
+        list.innerHTML = "";
+        return;
+      }
+
+      list.innerHTML = results
+        .map(
+          (r) => `
+    <li data-type="${r.membershipType}" data-id="${r.membershipId}">
+      <div class="suggestion">
+        <div class="suggestion-emblem"></div>
+        <div class="suggestion-text">
+          <strong>${r.displayName}</strong>
+          <span class="sub">Open profile</span>
+        </div>
+      </div>
+    </li>
+  `,
+        )
+        .join("");
+
+      if (list) list.hidden = false;
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") {
+        console.error("search failed", e);
+      }
+    }
+  });
+
+  list?.addEventListener("click", (e) => {
+    const li = (e.target as HTMLElement)?.closest("li");
+    if (!li) return;
+
+    const type = li.dataset.type;
+    const id = li.dataset.id;
+
+    window.location.href = `/profile/${type}/${id}`;
+  });
+</script>

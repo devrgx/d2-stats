@@ -46,7 +46,7 @@ import "../styles/global.css";
             el.className = "result";
             el.textContent = p.displayName;
             el.onclick = () => {
-              window.location.href = `/player/${p.membershipType}/${p.membershipId}`;
+              window.location.href = `/profile/${p.membershipType}/${p.membershipId}`;
             };
             results.appendChild(el);
           });

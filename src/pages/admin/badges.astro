@@ -1,70 +1,598 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import { addBadge } from "../../lib/db";
+import Layout from "../../layouts/Layout.astro"; // falls du ein Layout hast
+import BadgePill from "../../components/BadgePill.astro";
+import { BADGES, ALL_BADGE_KEYS, type BadgeKey } from "../../constants/badges";
 
-const method = Astro.request.method;
-let message = "";
+// Minimaler Admin-Check (gleiches Prinzip wie API)
+// Passe das an deine CruciCore Admin-Logik an:
+const cookies = Astro.request.headers.get("cookie") ?? "";
+let user: any = null;
+try {
+  const m = cookies.match(/bungie=([^;]+)/);
+  if (m) user = JSON.parse(decodeURIComponent(m[1]));
+} catch {}
 
-if (method === "POST") {
-  const form = await Astro.request.formData();
-
-  const player = form.get("player")?.toString();
-  const text = form.get("text")?.toString();
-  const badgeClass = form.get("badge_class")?.toString();
-  const tooltip = form.get("tooltip")?.toString();
-
-  if (player && text && badgeClass) {
-    await addBadge({
-      player_name: player,
-      badge_text: text,
-      badge_class: badgeClass,
-      tooltip,
-    });
-
-    message = "Badge added successfully.";
-  } else {
-    message = "Missing required fields.";
-  }
-}
+const isAdmin = !!user?.isAdmin;
 ---
 
-<Layout title="Admin · Badges">
-  <section class="container">
-    <h1>Badge Administration</h1>
+<Layout title="Admin — Badges">
+  {!isAdmin ? (
+    <section class="wrap">
+      <div class="card">
+        <h1>Unauthorized</h1>
+        <p>You do not have permission to access this page.</p>
+      </div>
+    </section>
+  ) : (
+    <section class="wrap">
+      <header class="head">
+        <div>
+          <h1>Badges</h1>
+          <p class="muted">Assign multiple badges to a user by Bungie membershipId.</p>
+        </div>
+        <div class="who">
+          <div class="who-label">Signed in as</div>
+          <div class="who-name">{user?.displayName ?? "Admin"}</div>
+        </div>
+      </header>
 
-    {message && <p class="muted">{message}</p>}
+      <div class="grid">
+        <div class="card">
+          <h2>User</h2>
 
-    <form method="post" style="max-width:480px; margin-top:24px;">
-      <label>
-        Player (Name#Code)
-        <input name="player" placeholder="rgx#2117" required />
-      </label>
+          <label class="label">Membership ID</label>
+          <div class="row">
+            <input id="membershipId" class="input" placeholder="4611686018..." />
+            <button id="loadBtn" class="btn">Load</button>
+          </div>
 
-      <label>
-        Badge Text
-        <input name="text" placeholder="Developer" required />
-      </label>
+          <div class="hint">
+            Tip: You can paste a membershipId directly. Optional: use search suggestions below.
+          </div>
 
-      <label>
-        Badge Type
-        <select name="badge_class" required>
-          <option value="dev">Developer</option>
-          <option value="advisor">Advisor</option>
-          <option value="partner">3rd Party Dev</option>
-        </select>
-      </label>
+          <label class="label" style="margin-top:16px;">Search (optional)</label>
+          <div class="row">
+            <input id="searchInput" class="input" placeholder="Search player (display name)..." />
+          </div>
 
-      <label>
-        Tooltip (optional)
-        <textarea
-          name="tooltip"
-          placeholder="This guy is the genius behind all of this"
-        ></textarea>
-      </label>
+          <div id="suggestions" class="suggestions" hidden></div>
 
-      <button class="btn primary" type="submit">
-        Add Badge
-      </button>
-    </form>
-  </section>
+          <div id="userMeta" class="user-meta" hidden>
+            <div class="meta-line">
+              <span class="meta-key">Selected:</span>
+              <span id="metaName" class="meta-val"></span>
+            </div>
+            <div class="meta-line">
+              <span class="meta-key">membershipId:</span>
+              <span id="metaId" class="meta-val mono"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Assign badges</h2>
+
+          <div id="status" class="status muted">No user loaded.</div>
+
+          <div class="badge-grid" id="badgeGrid">
+            {ALL_BADGE_KEYS
+              .slice()
+              .sort((a, b) => BADGES[a].priority - BADGES[b].priority)
+              .map((key) => (
+                <label class="badge-item" data-badge={key}>
+                  <input class="chk" type="checkbox" value={key} />
+                  <div class="badge-preview">
+                    <BadgePill badge={key} />
+                    <div class="badge-desc">{BADGES[key].description}</div>
+                  </div>
+                </label>
+              ))}
+          </div>
+
+          <div class="actions">
+            <button id="selectNone" class="btn ghost">Clear</button>
+            <button id="selectAll" class="btn ghost">Select all</button>
+            <div class="spacer"></div>
+            <button id="saveBtn" class="btn primary">Save</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <h3>Preview</h3>
+          <div id="preview" class="preview muted">No badges selected.</div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <script>
+    // ---- helpers
+    const $ = (id) => document.getElementById(id);
+    const membershipIdInput = $("membershipId");
+    const loadBtn = $("loadBtn");
+    const saveBtn = $("saveBtn");
+    const status = $("status");
+    const preview = $("preview");
+
+    const searchInput = $("searchInput");
+    const suggestions = $("suggestions");
+    const userMeta = $("userMeta");
+    const metaName = $("metaName");
+    const metaId = $("metaId");
+
+    const selectAllBtn = $("selectAll");
+    const selectNoneBtn = $("selectNone");
+
+    const badgeGrid = $("badgeGrid");
+    const checkboxes = Array.from(badgeGrid.querySelectorAll('input[type="checkbox"]'));
+
+    let currentMembershipId = "";
+    let abortCtrl;
+
+    function setStatus(text, kind = "muted") {
+      status.className = `status ${kind}`;
+      status.textContent = text;
+    }
+
+    function setPreview() {
+      const selected = getSelectedBadges();
+      if (!selected.length) {
+        preview.className = "preview muted";
+        preview.textContent = "No badges selected.";
+        return;
+      }
+      preview.className = "preview";
+      // Build pills by cloning the preview nodes from the grid (keeps styling consistent)
+      const pills = selected.map((k) => {
+        const item = badgeGrid.querySelector(`[data-badge="${k}"] .badge-preview span.badge-pill`);
+        if (!item) return `<span class="pill-fallback">${k}</span>`;
+        return item.outerHTML;
+      });
+      preview.innerHTML = pills.join(" ");
+    }
+
+    function getSelectedBadges() {
+      return checkboxes.filter((c) => c.checked).map((c) => c.value);
+    }
+
+    function setSelectedBadges(keys) {
+      const set = new Set(keys || []);
+      for (const c of checkboxes) c.checked = set.has(c.value);
+      setPreview();
+    }
+
+    // ---- load badges
+    async function loadBadges(membershipId) {
+      const id = (membershipId || "").trim();
+      if (!id) {
+        setStatus("Please provide a membershipId.", "error");
+        return;
+      }
+
+      currentMembershipId = id;
+      membershipIdInput.value = id;
+
+      setStatus("Loading badges…", "muted");
+      saveBtn.disabled = true;
+      loadBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/admin/badges?membershipId=${encodeURIComponent(id)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(data?.error || "Failed to load.", "error");
+          return;
+        }
+
+        setSelectedBadges(data.badges || []);
+        setStatus("Loaded.", "ok");
+      } catch (e) {
+        setStatus("Network error while loading.", "error");
+      } finally {
+        saveBtn.disabled = false;
+        loadBtn.disabled = false;
+      }
+    }
+
+    // ---- save badges
+    async function saveBadges() {
+      const id = (currentMembershipId || membershipIdInput.value || "").trim();
+      if (!id) {
+        setStatus("No membershipId selected.", "error");
+        return;
+      }
+
+      const badges = getSelectedBadges();
+      setStatus("Saving…", "muted");
+      saveBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/admin/badges", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ membershipId: id, badges }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(data?.error || "Save failed.", "error");
+          return;
+        }
+
+        setStatus("Saved.", "ok");
+      } catch (e) {
+        setStatus("Network error while saving.", "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    // ---- optional search suggestions
+    function renderSuggestions(items) {
+      if (!items || !items.length) {
+        suggestions.hidden = true;
+        suggestions.innerHTML = "";
+        return;
+      }
+
+      suggestions.hidden = false;
+      suggestions.innerHTML = items
+        .slice(0, 8)
+        .map((p) => {
+          // Expected shape from your existing /api/search:
+          // { displayName, membershipId, membershipType }
+          const name = (p.displayName ?? "Unknown").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const id = String(p.membershipId ?? "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const type = String(p.membershipType ?? "");
+          return `
+            <button class="sug" type="button" data-mid="${id}" data-name="${name}" data-type="${type}">
+              <div class="sug-title">${name}</div>
+              <div class="sug-sub mono">${id}${type ? " • type " + type : ""}</div>
+            </button>
+          `;
+        })
+        .join("");
+    }
+
+    async function searchPlayers(q) {
+      const query = (q || "").trim();
+      if (query.length < 2) {
+        renderSuggestions([]);
+        return;
+      }
+
+      if (abortCtrl) abortCtrl.abort();
+      abortCtrl = new AbortController();
+
+      try {
+        // Uses your existing endpoint (you already have this in CruciCore)
+        const res = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+          signal: abortCtrl.signal,
+        });
+
+        const data = await res.json();
+        // support either {results:[...]} or direct array
+        const results = Array.isArray(data) ? data : (data?.results ?? data?.data ?? []);
+        // dedupe by displayName (same idea you used)
+        const map = new Map();
+        for (const r of results) {
+          if (r?.displayName && !map.has(r.displayName)) map.set(r.displayName, r);
+        }
+        renderSuggestions(Array.from(map.values()));
+      } catch (e) {
+        // ignore abort
+      }
+    }
+
+    // ---- events
+    loadBtn.addEventListener("click", () => loadBadges(membershipIdInput.value));
+    saveBtn.addEventListener("click", () => saveBadges());
+
+    membershipIdInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") loadBadges(membershipIdInput.value);
+    });
+
+    for (const c of checkboxes) {
+      c.addEventListener("change", () => setPreview());
+    }
+
+    selectAllBtn.addEventListener("click", () => {
+      for (const c of checkboxes) c.checked = true;
+      setPreview();
+    });
+
+    selectNoneBtn.addEventListener("click", () => {
+      for (const c of checkboxes) c.checked = false;
+      setPreview();
+    });
+
+    searchInput.addEventListener("input", () => searchPlayers(searchInput.value));
+
+    suggestions.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".sug");
+      if (!btn) return;
+
+      const mid = btn.getAttribute("data-mid") || "";
+      const name = btn.getAttribute("data-name") || "";
+
+      metaName.textContent = name;
+      metaId.textContent = mid;
+      userMeta.hidden = false;
+
+      renderSuggestions([]);
+      searchInput.value = name;
+
+      await loadBadges(mid);
+    });
+
+    // initial preview
+    setPreview();
+  </script>
+
+  <style>
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 18px 48px;
+    }
+
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    h1 { margin: 0; font-size: 28px; }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    h3 { margin: 0 0 10px; font-size: 14px; opacity: 0.9; }
+
+    .muted { opacity: 0.75; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .who {
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+    }
+    .who-label { font-size: 11px; opacity: 0.7; }
+    .who-name { font-weight: 700; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      backdrop-filter: blur(10px);
+    }
+
+    .label {
+      display: block;
+      font-size: 12px;
+      opacity: 0.8;
+      margin: 10px 0 6px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.25);
+      color: rgba(255,255,255,0.92);
+      outline: none;
+    }
+
+    .input:focus {
+      border-color: rgba(255,255,255,0.20);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+    }
+
+    .btn {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: rgba(255,255,255,0.10);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn.primary {
+      border-color: rgba(255,255,255,0.16);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+    }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: 0.72;
+      line-height: 1.35;
+    }
+
+    .suggestions {
+      margin-top: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.25);
+    }
+
+    .sug {
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,0.92);
+      cursor: pointer;
+      display: grid;
+      gap: 4px;
+    }
+
+    .sug:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .sug + .sug {
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .sug-title { font-weight: 800; }
+    .sug-sub { font-size: 12px; opacity: 0.75; }
+
+    .user-meta {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .meta-line {
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .meta-key { opacity: 0.7; min-width: 86px; }
+    .meta-val { font-weight: 700; }
+
+    .status {
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.18);
+      margin-bottom: 12px;
+    }
+
+    .status.ok {
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.10);
+    }
+
+    .status.error {
+      border-color: rgba(255,77,79,0.35);
+      background: rgba(255,77,79,0.10);
+    }
+
+    .badge-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .badge-grid { grid-template-columns: 1fr; }
+    }
+
+    .badge-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .badge-item:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .chk {
+      margin-top: 6px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .badge-preview {
+      display: grid;
+      gap: 6px;
+    }
+
+    .badge-desc {
+      font-size: 12px;
+      opacity: 0.72;
+      line-height: 1.35;
+    }
+
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .spacer { flex: 1; }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      margin: 14px 0;
+    }
+
+    .preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.18);
+      min-height: 42px;
+    }
+
+    .pill-fallback {
+      display: inline-block;
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      font-weight: 700;
+      font-size: 12px;
+    }
+  </style>
 </Layout>

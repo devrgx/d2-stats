@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
+import type { Database } from "sqlite";
 
 const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
 
@@ -10,18 +11,18 @@ const DB_PATH = process.env.SQLITE_PATH || "./data/app.db";
 const dir = path.dirname(DB_PATH);
 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-let dbPromise;
+let dbPromise: Promise<Database> | null = null;
 
 async function getDb() {
-    if (!dbPromise) {
-        dbPromise = open({
-            filename: DB_PATH,
-            driver: sqlite3.Database,
-        });
+  if (!dbPromise) {
+    dbPromise = open({
+      filename: DB_PATH,
+      driver: sqlite3.Database,
+    });
 
-        const db = await dbPromise;
+    const db = await dbPromise;
 
-        await db.exec(`
+    await db.exec(`
       PRAGMA journal_mode = WAL;
 
       CREATE TABLE IF NOT EXISTS trials_meta (
@@ -53,73 +54,97 @@ async function getDb() {
         updated_at TEXT NOT NULL
       );
     `);
-    }
+  }
 
-    return dbPromise;
+  return dbPromise;
 }
 
 /* ===================== TRIALS ===================== */
 
 export async function setTrialsMeta({
-    active,
-    map_name,
-    map_hash,
-    map_image,
+  active,
+  map_name,
+  map_image,
+}: {
+  active: boolean;
+  map_name?: string | null;
+  map_image?: string | null;
 }) {
-    const db = await getDb();
-    const updated_at = new Date().toISOString();
+  const db = await getDb();
+  const updated_at = new Date().toISOString();
 
-    await db.run(
-        `INSERT INTO trials_meta
-      (active, map_name, map_hash, map_image, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
-        [
-            active ? 1 : 0,
-            map_name || null,
-            map_hash || null,
-            map_image || null,
-            updated_at,
-        ]
-    );
+  await db.run(
+    `
+    INSERT INTO trials_meta (
+      active,
+      map_name,
+      map_image,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?)
+    `,
+    [
+      active ? 1 : 0,
+      map_name ?? null,
+      map_image ?? null,
+      updated_at,
+    ]
+  );
 }
 
 export async function getLatestTrialsMeta() {
-    const db = await getDb();
-    return db.get(
-        `SELECT *
+  const db = await getDb();
+  return db.get(
+    `SELECT *
      FROM trials_meta
      ORDER BY datetime(updated_at) DESC, id DESC
      LIMIT 1`
-    );
+  );
 }
 
 /* ===================== BADGES ===================== */
 
 export async function addBadge({
-    player_name,
-    badge_text,
-    icon_url,
-    color,
-    tooltip,
-    badge_class,
+  player_name,
+  badge_text,
+  icon_url = null,
+  color = null,
+  tooltip = null,
+  badge_class = null,
+}: {
+  player_name: string;
+  badge_text: string;
+  icon_url?: string | null;
+  color?: string | null;
+  tooltip?: string | null;
+  badge_class?: string | null;
 }) {
-    const db = await getDb();
-    const created_at = new Date().toISOString();
+  const db = await getDb();
+  const created_at = new Date().toISOString();
 
-    await db.run(
-        `INSERT INTO badges
-      (player_name, badge_text, icon_url, color, tooltip, badge_class, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-            player_name,
-            badge_text,
-            icon_url || null,
-            color || null,
-            tooltip || null,
-            badge_class || null,
-            created_at,
-        ]
-    );
+  await db.run(
+    `
+    INSERT INTO badges (
+      player_name,
+      badge_text,
+      icon_url,
+      color,
+      tooltip,
+      badge_class,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      player_name,
+      badge_text,
+      icon_url,
+      color,
+      tooltip,
+      badge_class,
+      created_at,
+    ]
+  );
 }
 
 export async function listBadgesByPlayer(player_name: string) {
@@ -147,36 +172,43 @@ export async function listBadgesByPlayer(player_name: string) {
 }
 
 export async function listRecentBadges(limit = 20) {
-    const db = await getDb();
-    return db.all(
-        `SELECT *
+  const db = await getDb();
+  return db.all(
+    `SELECT *
      FROM badges
      ORDER BY datetime(created_at) DESC, id DESC
      LIMIT ?`,
-        [limit]
-    );
+    [limit]
+  );
 }
 
 /* ===================== SITE SETTINGS ===================== */
 
-export async function getSetting(key) {
-    const db = await getDb();
-    const row = await db.get(
-        `SELECT value FROM site_settings WHERE key = ?`,
-        [key]
-    );
-    return row?.value ?? null;
+export async function getSetting(key: string) {
+  const db = await getDb();
+  const row = await db.get(
+    `SELECT value FROM site_settings WHERE key = ?`,
+    [key]
+  );
+  return row?.value ?? null;
 }
 
-export async function setSetting(key, value) {
-    const db = await getDb();
-    const updated_at = new Date().toISOString();
+export async function setSetting(
+  key: string,
+  value: string | number | boolean | null
+): Promise<void> {
+  const db = await getDb();
+  const updated_at = new Date().toISOString();
 
-    await db.run(
-        `INSERT INTO site_settings (key, value, updated_at)
-     VALUES (?, ?, ?)
-     ON CONFLICT(key)
-     DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-        [key, String(value), updated_at]
-    );
+  await db.run(
+    `
+    INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(key)
+    DO UPDATE SET
+      value = excluded.value,
+      updated_at = excluded.updated_at
+    `,
+    [key, value !== null ? String(value) : null, updated_at]
+  );
 }
