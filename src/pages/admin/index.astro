@@ -1,5 +1,5 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getSetting } from "../../lib/db";
 
 /* ===================== ADMIN AUTH ===================== */
@@ -17,11 +17,10 @@ const discordInvite =
   (await getSetting("discord_invite")) ?? "https://discord.gg/yourlink";
 ---
 
-<Layout title="Admin Panel · CruciCore">
+<AdminLayout title="Admin Panel · CruciCore">
   <section class="container">
     <h1>Admin Panel</h1>
 
-    <!-- ================= SETTINGS ================= -->
     <h2>Site Settings</h2>
 
     <form method="POST" action="/api/admin?action=settings">
@@ -47,7 +46,6 @@ const discordInvite =
 
     <hr />
 
-    <!-- ================= TRIALS ================= -->
     <h2>Trials Rotation</h2>
 
     <form method="POST" action="/api/trials">
@@ -74,18 +72,7 @@ const discordInvite =
         Update Trials
       </button>
     </form>
-
-    <hr />
-
-    <!-- ================= LOGOUT ================= -->
-    <form method="POST" action="/api/admin?action=logout">
-      <button type="submit" class="btn">
-        Logout
-      </button>
-    </form>
   </section>
-
-  <a href="/admin/badges">Manage Badges</a>
 
   <!-- ================= MAP AUTOCOMPLETE ================= -->
   <script>
@@ -121,40 +108,4 @@ const discordInvite =
       });
     }
   </script>
-
-  <style>
-    .map-suggestions {
-      list-style: none;
-      margin: 6px 0 0;
-      padding: 0;
-      background: rgba(20, 24, 32, 0.95);
-      border: 1px solid rgba(120, 190, 255, 0.18);
-      border-radius: 10px;
-      max-height: 220px;
-      overflow-y: auto;
-    }
-
-    .map-suggestions li {
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-
-    .map-suggestions li:hover {
-      background: rgba(0, 209, 255, 0.12);
-    }
-
-    form {
-      margin-bottom: 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 420px;
-    }
-
-    hr {
-      margin: 40px 0;
-      border: none;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-    }
-  </style>
-</Layout>
+</AdminLayout>

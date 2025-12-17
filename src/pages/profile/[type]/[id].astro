@@ -2,8 +2,10 @@
 import Layout from "../../../layouts/Layout.astro";
 import StatBlock from "../../../components/StatBlock.astro";
 import CompRankBars from "../../../components/CompRankBars.astro";
+import BadgePill from "../../../components/BadgePill.astro";
 
-import { listBadgesByPlayer } from "../../../lib/db";
+import { BADGES } from "../../../constants/badges";
+import { getUserBadges } from "../../../server/badgesStore";
 
 let badges: {
   badge_text: string;
@@ -22,7 +24,8 @@ const apiKey = import.meta.env.BUNGIE_API_KEY;
 // ===== Standardwerte =====
 let playerName = "Unknown Guardian";
 let bungieTag = "";
-let clanName = "[C] Crucis";
+let clanName: string | null = null;
+let clanTag: string | null = null;
 let emblemBackground = "/missing_emblem_special.jpg";
 let emblemIcon = "/missing_emblem_icon.png";
 let compPoints = 0;
@@ -56,7 +59,6 @@ try {
       ? `#${user.bungieGlobalDisplayNameCode}`
       : "";
   }
-  clanName = data.Response?.profile?.data?.clanName ?? "[C] Crucis";
 
   // 3️⃣ Charakterdaten
   const characters = data.Response.characters?.data ?? {};
@@ -91,7 +93,6 @@ try {
     }
   }
 
-  // 5️⃣ COMP Punkte (Progression 3696598664)
   const progressions = (data.Response.characterProgressions?.data ??
     {}) as Record<string, { progressions?: Record<string, any> }>;
   const firstProg = Object.values(progressions)[0]?.progressions ?? {};
@@ -107,14 +108,29 @@ try {
 }
 
 try {
-  badges = await listBadgesByPlayer(playerName);
-} catch (e) {
-  console.warn("Could not load badges:", e);
+  const clanRes = await fetch(
+    `https://www.bungie.net/Platform/GroupV2/User/${membershipType}/${membershipId}/0/1`,
+    { headers: { "X-API-Key": apiKey } },
+  );
+  const clanData = await clanRes.json();
+
+  const group = clanData?.Response?.results?.[0]?.group;
+  if (group) {
+    clanName = group.name ?? null;
+    clanTag = group.clanInfo?.clanCallsign ?? null;
+  }
+} catch {
+  clanName = null;
+  clanTag = null;
 }
 
 const badgeKey = bungieTag ? `${playerName}${bungieTag}` : playerName;
 
-badges = await listBadgesByPlayer(badgeKey);
+const userBadges = membershipId
+  ? getUserBadges(membershipId)
+      .slice()
+      .sort((a, b) => BADGES[a].priority - BADGES[b].priority)
+  : [];
 ---
 
 <Layout title={`${playerName} — CruciCore`}>
@@ -145,24 +161,23 @@ badges = await listBadgesByPlayer(badgeKey);
                 {playerName}
                 <span class="cc-header__tag">{bungieTag}</span>
 
-                {badges.length > 0 && (
-                  <span class="profile-badges">
-                    {badges.map((badge) => (
-                      <span
-                        class={`badge badge-${badge.badge_class ?? "default"}`}
-                        data-tooltip={badge.tooltip}
-                      >
-                        {badge.badge_text}
-                      </span>
+                {userBadges.length > 0 && (
+                  <section class="profile-badges">
+                    {userBadges.map((b) => (
+                      <BadgePill badge={b} />
                     ))}
-                  </span>
+                  </section>
                 )}
               </h2>
 
               <div class="cc-header__meta">
-                <span>{clanName}</span>
-                <span>• Platform: Steam</span>
-                <span>• Membership ID: {membershipId}</span>
+                {clanName && (
+                  <span class="pill">
+                    {clanTag && <strong>[{clanTag}]</strong>} {clanName}
+                  </span>
+                )}
+                <span>•</span>
+                <span class="pill">Platform: Steam</span>
               </div>
             </div>
           </>

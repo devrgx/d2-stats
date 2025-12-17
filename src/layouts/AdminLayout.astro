@@ -1,0 +1,94 @@
+---
+import Layout from "./Layout.astro";
+
+const { title = "Admin · CruciCore" } = Astro.props;
+---
+
+<Layout title={title}>
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <strong>CruciCore</strong>
+        <span>Admin Panel</span>
+      </div>
+
+      <nav class="admin-nav">
+        <a href="/admin">Dashboard</a>
+        <a href="/admin/badges">Badges</a>
+        <form method="POST" action="/api/admin?action=logout">
+          <button type="submit" class="link-btn">Logout</button>
+        </form>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <slot />
+    </main>
+  </div>
+
+  <style>
+    .admin-shell {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .admin-sidebar {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+      height: fit-content;
+    }
+
+    .admin-brand {
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .admin-brand span {
+      font-size: 12px;
+      opacity: 0.6;
+    }
+
+    .admin-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .admin-nav a,
+    .link-btn {
+      text-decoration: none;
+      background: none;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      text-align: left;
+      color: inherit;
+      cursor: pointer;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    .admin-nav a:hover,
+    .link-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      opacity: 1;
+    }
+
+    .admin-main {
+      min-width: 0;
+    }
+
+    @media (max-width: 900px) {
+      .admin-shell {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</Layout>

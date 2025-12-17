@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { BadgeKey } from "../constants/badges";
 import { ALL_BADGE_KEYS } from "../constants/badges";
 
@@ -12,7 +13,10 @@ type StoreShape = Record<
   }
 >;
 
-const DATA_PATH = path.resolve(process.cwd(), "data", "userBadges.json");
+// Storage lives under src/data to match the project structure.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_PATH = path.resolve(__dirname, "../data/userBadges.json");
 
 function ensureFile() {
   const dir = path.dirname(DATA_PATH);
@@ -26,7 +30,6 @@ function readStore(): StoreShape {
   try {
     return JSON.parse(raw) as StoreShape;
   } catch {
-    // If corrupt, keep a backup and reset to prevent crashes
     const backup = `${DATA_PATH}.corrupt-${Date.now()}`;
     fs.writeFileSync(backup, raw, "utf-8");
     fs.writeFileSync(DATA_PATH, "{}", "utf-8");
@@ -53,8 +56,7 @@ function validateBadges(input: unknown): BadgeKey[] {
 
 export function getUserBadges(membershipId: string): BadgeKey[] {
   const store = readStore();
-  const entry = store[membershipId];
-  return entry?.badges ?? [];
+  return store[membershipId]?.badges ?? [];
 }
 
 export function setUserBadges(args: {
@@ -68,7 +70,7 @@ export function setUserBadges(args: {
   store[args.membershipId] = {
     badges: normalized,
     updatedAt: new Date().toISOString(),
-    updatedBy: args.updatedBy || "unknown",
+    updatedBy: args.updatedBy || "admin",
   };
 
   writeStoreAtomic(store);
