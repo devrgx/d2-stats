@@ -22,24 +22,59 @@ try {
 
 /* ===================== SITE SETTINGS ===================== */
 
-const appVersion =
-  (await getSetting("app_version")) ?? APP_VERSION;
+const appVersion = (await getSetting("app_version")) ?? APP_VERSION;
 
-const appStatus =
-  (await getSetting("app_status")) ?? APP_STATUS;
+const appStatus = (await getSetting("app_status")) ?? APP_STATUS;
 
 const discordInvite =
-  (await getSetting("discord_invite")) ??
-  "https://discord.gg/yourlink";
+  (await getSetting("discord_invite")) ?? "https://discord.gg/yourlink";
 
 const { title = "CruciCore — Destiny 2 PvP & Trials Tracker" } = Astro.props;
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- ===================== BASIC META ===================== -->
+    <title>CruciCore — Destiny 2 PvP & Trials Tracker</title>
+    <meta
+      name="description"
+      content="Advanced Destiny 2 PvP & Trials statistics. Look up players, ranks, and performance."
+    />
+
+    <!-- ===================== OPEN GRAPH ===================== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CruciCore" />
+    <meta
+      property="og:title"
+      content="CruciCore — Destiny 2 PvP & Trials Tracker"
+    />
+    <meta
+      property="og:description"
+      content="Advanced Destiny 2 PvP & Trials statistics. Look up players, ranks, and performance."
+    />
+    <meta property="og:url" content="https://beta.notrgx.com/" />
+    <meta property="og:image" content="https://beta.notrgx.com/logo/og_1200x630.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- ===================== TWITTER / DISCORD ===================== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="CruciCore — Destiny 2 PvP & Trials Tracker"
+    />
+    <meta
+      name="twitter:description"
+      content="Advanced Destiny 2 PvP & Trials statistics. Look up players, ranks, and performance."
+    />
+    <meta name="twitter:image" content="https://beta.notrgx.com/logo/og_1200x630.png" />
+
+    <!-- ===================== THEME COLOR ===================== -->
+    <meta name="theme-color" content="#3b82f6" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -67,9 +102,7 @@ const { title = "CruciCore — Destiny 2 PvP & Trials Tracker" } = Astro.props;
           {
             user ? (
               <button class="user-icon" aria-label="User menu">
-                <span class="user-initial">
-                  {user.displayName?.[0] ?? "U"}
-                </span>
+                <span class="user-initial">{user.displayName?.[0] ?? "U"}</span>
               </button>
             ) : (
               <a
@@ -98,7 +131,9 @@ const { title = "CruciCore — Destiny 2 PvP & Trials Tracker" } = Astro.props;
                   <span class="muted">Bungie Account</span>
                 </div>
 
-                <a href={`/profile/${user.membershipType}/${user.membershipId}`}>
+                <a
+                  href={`/profile/${user.membershipType}/${user.membershipId}`}
+                >
                   Profile
                 </a>
                 <a href="/profile/settings">Settings</a>
@@ -133,9 +168,7 @@ const { title = "CruciCore — Destiny 2 PvP & Trials Tracker" } = Astro.props;
         <div class="footer-right">
           <div class="footer-links">
             <a href="/help">Help</a>
-            <a href={discordInvite} target="_blank" rel="noopener">
-              Discord
-            </a>
+            <a href={discordInvite} target="_blank" rel="noopener"> Discord </a>
           </div>
         </div>
       </div>
