@@ -7,12 +7,6 @@ import BadgePill from "../../../components/BadgePill.astro";
 import { BADGES } from "../../../constants/badges";
 import { getUserBadges } from "../../../server/badgesStore";
 
-let badges: {
-  badge_text: string;
-  tooltip?: string;
-  badge_class?: string;
-}[] = [];
-
 export const prerender = false;
 
 const { type, id } = Astro.params;
@@ -21,111 +15,40 @@ const membershipType = Number(type);
 const membershipId = id;
 const apiKey = import.meta.env.BUNGIE_API_KEY;
 
-// ===== Standardwerte =====
-let playerName = "Unknown Guardian";
-let bungieTag = "";
-let clanName: string | null = null;
-let clanTag: string | null = null;
-let emblemBackground = "/missing_emblem_special.jpg";
-let emblemIcon = "/missing_emblem_icon.png";
+// ===== SSR FALLBACKS =====
+const playerName = "Loading Guardian";
+const bungieTag = "";
+
+const emblemBackground = "/missing_emblem_special.jpg";
+const emblemIcon = "/missing_emblem_icon.png";
+
+// ===== COMP (ALT & FUNKTIONIEREND, SSR) =====
 let compPoints = 0;
 let compProgressToNext = 0;
 let compNextLevelAt = 0;
-let isLoading = true;
-
-// ===== Socials (Platzhalter) =====
-const socials = {
-  twitch: "test",
-  youtube: "test",
-  reddit: "test",
-  website: "https://beta.notrgx.com/",
-};
 
 try {
-  // 1️⃣ Profil abrufen
   const res = await fetch(
     `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=100,200,202,900`,
-    { headers: { "X-API-Key": apiKey } },
+    { headers: { "X-API-Key": apiKey } }
   );
+
   const data = await res.json();
-  if (!data?.Response) throw new Error("Invalid Bungie API response");
-
-  // 2️⃣ Name + Clan
-  const user = data.Response.profile?.data?.userInfo;
-  if (user) {
-    playerName =
-      user.bungieGlobalDisplayName ?? user.displayName ?? "Unknown Guardian";
-    bungieTag = user.bungieGlobalDisplayNameCode
-      ? `#${user.bungieGlobalDisplayNameCode}`
-      : "";
-  }
-
-  // 3️⃣ Charakterdaten
-  const characters = data.Response.characters?.data ?? {};
-  const firstChar = Object.values(characters)[0] as
-    | {
-        emblemPath?: string;
-        emblemBackgroundPath?: string;
-        emblemHash?: number;
-      }
-    | undefined;
-
-  if (firstChar) {
-    if (firstChar.emblemPath)
-      emblemIcon = `https://www.bungie.net${firstChar.emblemPath}`;
-    if (firstChar.emblemBackgroundPath)
-      emblemBackground = `https://www.bungie.net${firstChar.emblemBackgroundPath}`;
-
-    // 4️⃣ Manifest-Call → Secondary Special
-    if (firstChar.emblemHash) {
-      const manRes = await fetch(
-        `https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${firstChar.emblemHash}/`,
-        { headers: { "X-API-Key": apiKey } },
-      );
-      const man = await manRes.json();
-      const def = man?.Response ?? {};
-      const special =
-        def.secondarySpecial ??
-        def.secondaryOverlay ??
-        def.secondaryIcon ??
-        null;
-      if (special) emblemBackground = `https://www.bungie.net${special}`;
-    }
-  }
-
-  const progressions = (data.Response.characterProgressions?.data ??
-    {}) as Record<string, { progressions?: Record<string, any> }>;
-  const firstProg = Object.values(progressions)[0]?.progressions ?? {};
+  const progressions = data?.Response?.characterProgressions?.data ?? {};
+  const firstCharProg = Object.values(progressions)[0] as any;
+  const firstProg = firstCharProg?.progressions ?? {};
   const compProg = firstProg["3696598664"];
+
   if (compProg) {
     compPoints = compProg.currentProgress ?? 0;
     compProgressToNext = compProg.progressToNextLevel ?? 0;
     compNextLevelAt = compProg.nextLevelAt ?? 0;
   }
-  isLoading = false;
-} catch (err) {
-  console.error("Bungie API Error:", err);
+} catch (e) {
+  console.error("COMP SSR failed", e);
 }
 
-try {
-  const clanRes = await fetch(
-    `https://www.bungie.net/Platform/GroupV2/User/${membershipType}/${membershipId}/0/1`,
-    { headers: { "X-API-Key": apiKey } },
-  );
-  const clanData = await clanRes.json();
-
-  const group = clanData?.Response?.results?.[0]?.group;
-  if (group) {
-    clanName = group.name ?? null;
-    clanTag = group.clanInfo?.clanCallsign ?? null;
-  }
-} catch {
-  clanName = null;
-  clanTag = null;
-}
-
-const badgeKey = bungieTag ? `${playerName}${bungieTag}` : playerName;
-
+// ===== BADGES =====
 const userBadges = membershipId
   ? getUserBadges(membershipId)
       .slice()
@@ -134,88 +57,79 @@ const userBadges = membershipId
 ---
 
 <Layout title={`${playerName} — CruciCore`}>
-  <!-- Emblem Header -->
+  <!-- ================= HEADER ================= -->
   <section
     class="cc-header"
-    style={!isLoading ? `background-image:url('${emblemBackground}')` : ""}
+    style={`background-image:url('${emblemBackground}')`}
+    data-profile-header
+    data-membership-type={membershipType}
+    data-membership-id={membershipId}
   >
     <div class="cc-header__scrim"></div>
 
     <div class="cc-header__inner">
-      {
-        isLoading ? (
-          <>
-            <div class="cc-header__icon skeleton skeleton-avatar" />
+      <div class="cc-header__icon skeleton skeleton-avatar" data-skel-avatar></div>
 
-            <div class="cc-header__info">
-              <div class="skeleton skeleton-line title" />
-              <div class="skeleton skeleton-line small" />
-            </div>
-          </>
-        ) : (
-          <>
-            <img src={emblemIcon} alt="Emblem" class="cc-header__icon" />
+      <img
+        src={emblemIcon}
+        alt="Emblem"
+        class="cc-header__icon"
+        data-profile-emblem
+        style="display:none;"
+      />
 
-            <div class="cc-header__info">
-              <h2 class="cc-header__name">
-                {playerName}
-                <span class="cc-header__tag">{bungieTag}</span>
+      <div class="cc-header__info">
+        <h2 class="cc-header__name">
+          <span class="skeleton skeleton-line title" data-skel-title></span>
 
-                {userBadges.length > 0 && (
-                  <section class="profile-badges">
-                    {userBadges.map((b) => (
-                      <BadgePill badge={b} />
-                    ))}
-                  </section>
-                )}
-              </h2>
+          <span data-profile-name>{playerName}</span>
+          <span class="cc-header__tag" data-profile-tag>{bungieTag}</span>
 
-              <div class="cc-header__meta">
-                {clanName && (
-                  <span class="pill">
-                    {clanTag && <strong>[{clanTag}]</strong>} {clanName}
-                  </span>
-                )}
-                <span>•</span>
-                <span class="pill">Platform: Steam</span>
-              </div>
-            </div>
-          </>
-        )
-      }
+          {userBadges.length > 0 && (
+            <section class="profile-badges">
+              {userBadges.map((b) => (
+                <BadgePill badge={b} />
+              ))}
+            </section>
+          )}
+        </h2>
+
+        <div class="cc-header__meta">
+          <span class="skeleton skeleton-line small" data-skel-meta></span>
+          <span class="pill" data-meta-clan style="display:none;"></span>
+          <span data-meta-sep style="display:none;">•</span>
+          <span class="pill" data-meta-platform style="display:none;">
+            Platform: Steam
+          </span>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- Hauptinhalt -->
+  <!-- ================= CONTENT ================= -->
   <main class="container">
     <section style="margin-top:32px;">
       <h2>Trials of Osiris</h2>
 
       <div class="grid">
-        {
-          isLoading ? (
-            Array.from({ length: 4 }).map(() => (
-              <div class="col-3">
-                <div class="skeleton skeleton-card" />
-              </div>
-            ))
-          ) : (
-            <>
-              <div class="col-3">
-                <StatBlock label="Weekly KD" value="—" />
-              </div>
-              <div class="col-3">
-                <StatBlock label="Seasonal KD" value="—" />
-              </div>
-              <div class="col-3">
-                <StatBlock label="Flawless Count" value="—" />
-              </div>
-              <div class="col-3">
-                <StatBlock label="Flawless this week" value="—" />
-              </div>
-            </>
-          )
-        }
+        {Array.from({ length: 4 }).map(() => (
+          <div class="col-3" data-skel-trials>
+            <div class="skeleton skeleton-card" />
+          </div>
+        ))}
+
+        <div class="col-3" data-real-trials style="display:none;">
+          <StatBlock label="Weekly KD" value="—" />
+        </div>
+        <div class="col-3" data-real-trials style="display:none;">
+          <StatBlock label="Seasonal KD" value="—" />
+        </div>
+        <div class="col-3" data-real-trials style="display:none;">
+          <StatBlock label="Flawless Count" value="—" />
+        </div>
+        <div class="col-3" data-real-trials style="display:none;">
+          <StatBlock label="Flawless this week" value="—" />
+        </div>
       </div>
     </section>
 
@@ -223,40 +137,99 @@ const userBadges = membershipId
       <h2>Competitive / Crucible</h2>
 
       <div class="grid">
-        {
-          isLoading ? (
-            Array.from({ length: 3 }).map(() => (
-              <div class="col-4">
-                <div class="skeleton skeleton-card" />
-              </div>
-            ))
-          ) : (
-            <>
-              <div class="col-4">
-                <StatBlock label="Overall KD" value="—" />
-              </div>
-              <div class="col-4">
-                <StatBlock label="Kills" value="—" />
-              </div>
-              <div class="col-4">
-                <StatBlock label="Deaths" value="—" />
-              </div>
-            </>
-          )
-        }
+        {Array.from({ length: 3 }).map(() => (
+          <div class="col-4" data-skel-crucible>
+            <div class="skeleton skeleton-card" />
+          </div>
+        ))}
+
+        <div class="col-4" data-real-crucible style="display:none;">
+          <StatBlock label="Overall KD" value="—" />
+        </div>
+        <div class="col-4" data-real-crucible style="display:none;">
+          <StatBlock label="Kills" value="—" />
+        </div>
+        <div class="col-4" data-real-crucible style="display:none;">
+          <StatBlock label="Deaths" value="—" />
+        </div>
       </div>
 
-      {
-        !isLoading && (
-          <div style="margin-top:20px;">
-            <CompRankBars
-              points={compPoints}
-              nextLevelAt={compNextLevelAt}
-              toNext={compProgressToNext}
-            />
-          </div>
-        )
-      }
+      <div style="margin-top:20px;">
+        <div class="skeleton skeleton-card" style="height:64px;" data-skel-rank></div>
+
+        <!-- ✅ COMP WIE FRÜHER -->
+        <CompRankBars
+          points={compPoints}
+          nextLevelAt={compNextLevelAt}
+          toNext={compProgressToNext}
+        />
+      </div>
     </section>
   </main>
+
+  <!-- ================= CLIENT ================= -->
+  <script type="module">
+    const header = document.querySelector("[data-profile-header]");
+    const membershipType = header?.dataset.membershipType;
+    const membershipId = header?.dataset.membershipId;
+
+    function finish() {
+      document.querySelector("[data-skel-avatar]")?.remove();
+      document.querySelector("[data-skel-title]")?.remove();
+      document.querySelector("[data-skel-meta]")?.remove();
+      document.querySelector("[data-skel-rank]")?.remove();
+
+      document.querySelectorAll("[data-skel-trials]").forEach(e => e.remove());
+      document.querySelectorAll("[data-real-trials]").forEach(e => e.style.display = "");
+
+      document.querySelectorAll("[data-skel-crucible]").forEach(e => e.remove());
+      document.querySelectorAll("[data-real-crucible]").forEach(e => e.style.display = "");
+
+      document.querySelector("[data-meta-platform]")?.style.setProperty("display", "");
+    }
+
+    async function run() {
+      try {
+        const res = await fetch(
+          `/api/profile?type=${membershipType}&id=${membershipId}`
+        );
+        if (!res.ok) throw new Error(res.status);
+
+        const data = await res.json();
+        const profile = data.profile;
+        const clan = data.clan;
+
+        const user = profile?.profile?.data?.userInfo;
+        const name = user?.bungieGlobalDisplayName ?? "Unknown Guardian";
+        const code = user?.bungieGlobalDisplayNameCode;
+        const tag = code ? `#${code}` : "";
+
+        document.querySelector("[data-profile-name]").textContent = name;
+        document.querySelector("[data-profile-tag]").textContent = tag;
+
+        if (data?.emblem?.background) {
+          header.style.backgroundImage = `url('${data.emblem.background}')`;
+        }
+
+        const img = document.querySelector("[data-profile-emblem]");
+        if (img && data?.emblem?.icon) {
+          img.src = data.emblem.icon;
+          img.style.display = "";
+        }
+
+        if (clan?.name) {
+          const el = document.querySelector("[data-meta-clan]");
+          el.innerHTML = `${clan.tag ? `<strong>[${clan.tag}]</strong> ` : ""}${clan.name}`;
+          el.style.display = "";
+          document.querySelector("[data-meta-sep]").style.display = "";
+        }
+      } catch (e) {
+        console.error("hydrate failed", e);
+      } finally {
+        finish();
+      }
+    }
+
+    run();
+  </script>
 </Layout>

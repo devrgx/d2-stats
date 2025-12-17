@@ -1,101 +1,45 @@
-/* ========== Competitive Rank Bars ========== */
-
 .comp-rank-box {
   background: rgba(0, 0, 0, 0.25);
-  padding: 14px 18px;
-  border-radius: 10px;
+  padding: 16px 20px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(6px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 /* ---------- Header ---------- */
-.comp-rank-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  margin-bottom: 6px;
-}
 
 .comp-rank-header h3 {
   font-size: 15px;
+  margin: 0 0 6px 0;
   font-weight: 600;
-  color: #fff;
-  margin: 0;
 }
 
-.toggle-hint {
-  font-size: 13px;
-  color: #aaa;
-  user-select: none;
-  transition: color 0.2s ease;
-}
+/* ---------- Points ---------- */
 
-.toggle-hint:hover {
-  color: #fff;
-}
-
-/* ---------- Wrapper ---------- */
-.comp-rank-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 4px; /* kleiner Abstand zwischen Divisionen */
-}
-
-/* ---------- Division Rows ---------- */
-.division-row {
-  transform-origin: top;
-  transition:
-    transform 0.35s ease,
-    opacity 0.35s ease,
-    box-shadow 0.3s ease,
-    background 0.3s ease;
-  border-radius: 6px;
-  padding: 4px 8px 4px 8px; /* enger Padding */
-  margin: 0; /* kein zusätzlicher Außenabstand */
-}
-
-/* ---------- Aktive Division ---------- */
-.division-row.active {
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
-  border-left: 3px solid var(--color, #ffd700);
-  padding-left: 10px;
-}
-
-/* ---------- Division Header ---------- */
-.division-header {
+.rank-points {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  color: #ddd;
-  font-size: 13.5px;
-  font-weight: 600;
-  margin-bottom: 1px;
-}
-
-.division-name {
-  text-transform: capitalize;
-}
-
-.division-points {
   font-size: 13px;
+  color: #ddd;
+  margin-bottom: 6px;
+}
+
+.rank-points-division {
   color: #aaa;
 }
 
-/* ---------- Progress Bars ---------- */
+/* ---------- Bar ---------- */
+
 .division-bar {
   display: flex;
-  gap: 5px;
-  margin: 0;
+  gap: 6px;
 }
 
 .segment {
   flex: 1;
-  height: 9px;
+  height: 10px;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
@@ -103,70 +47,58 @@
   height: 100%;
   width: var(--fill);
   background: var(--color);
-  border-radius: 4px;
-  transition: width 0.4s ease;
+  transition: width 0.35s ease;
 }
 
-/* ---------- Tier Labels ---------- */
+/* ---------- Tiers ---------- */
+
 .division-tiers {
   display: flex;
   justify-content: space-between;
+  font-size: 11px;
   color: #777;
-  font-size: 11.5px;
-  margin-top: 1px;
-  padding: 0 2px;
+  margin-top: 3px;
 }
 
-/* ---------- Animation States ---------- */
-.division-row {
-  transform: scaleY(1);
-  opacity: 1;
+/* ---------- Texts ---------- */
+
+.rank-next {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: #e0e0e0;
 }
 
-.comp-rank-wrapper:not(.expanded) .division-row:not(.active) {
-  transform: scaleY(0);
-  opacity: 0;
-  height: 0;
-  overflow: hidden;
+.rank-ascendant {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #9a9a9a;
 }
 
-/* ---------- Responsive ---------- */
-@media (max-width: 768px) {
-  .division-header {
-    font-size: 12.5px;
-  }
-
-  .segment {
-    height: 7px;
-  }
-
-  .division-tiers {
-    font-size: 10.5px;
-  }
+.rank-info {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: #aaa;
 }
 
-/* ---------- Tooltip ---------- */
-.rank-tooltip {
-  position: absolute; /* statt fixed */
-  background: rgba(20, 20, 20, 0.95);
-  color: #fff;
-  padding: 6px 10px;
-  font-size: 13px;
-  border-radius: 6px;
-  pointer-events: none;
-  z-index: 100;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  transition: opacity 0.15s ease;
-  white-space: nowrap;
+/* ---------- Emblem (Ascendant + Ascendant Zero) ---------- */
+
+.rank-emblem {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
 }
 
-.rank-tooltip.hidden {
-  opacity: 0;
-  visibility: hidden;
+.rank-emblem-text {
+  font-size: 12.5px;
+  color: #bbb;
 }
 
-.segment:hover .segment-fill {
-  filter: brightness(1.25);
-  transition: filter 0.2s ease;
+.rank-emblem img {
+  width: 350px;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
 }

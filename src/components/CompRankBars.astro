@@ -2,23 +2,33 @@
 /* @ts-nocheck */
 import "../styles/CompRankBars.css";
 
-// Props: aktuelle Comp-Punkte (0–15000)
+type DivisionName =
+  | "Copper"
+  | "Bronze"
+  | "Silver"
+  | "Gold"
+  | "Platinum"
+  | "Adept"
+  | "Ascendant"
+  | "Ascendant Zero";
+
 const { points = 0 } = Astro.props;
 
-// Divisionen mit ihren Unterrängen (III, II, I)
-const divisions = [
-  { name: "Copper", tiers: [250, 500, 500] },      // 0–1249
-  { name: "Bronze", tiers: [500, 500, 500] },      // 1250–2749
-  { name: "Silver", tiers: [500, 500, 500] },      // 2750–4249
-  { name: "Gold", tiers: [500, 500, 500] },        // 4250–5749
-  { name: "Platinum", tiers: [500, 500, 500] },    // 5750–7249
-  { name: "Adept", tiers: [500, 500, 500] },       // 7250–8749
-  { name: "Ascendant", tiers: [500, 500, 250] },   // 8750–9999
-  { name: "Ascendant Zero", tiers: [5000] }, // 10000–15000
+const divisions: {
+  name: DivisionName;
+  tiers: number[];
+}[] = [
+  { name: "Copper", tiers: [250, 500, 500] },
+  { name: "Bronze", tiers: [500, 500, 500] },
+  { name: "Silver", tiers: [500, 500, 500] },
+  { name: "Gold", tiers: [500, 500, 500] },
+  { name: "Platinum", tiers: [500, 500, 500] },
+  { name: "Adept", tiers: [500, 500, 500] },
+  { name: "Ascendant", tiers: [500, 500, 250] },
+  { name: "Ascendant Zero", tiers: [5000] },
 ];
 
-// Farben je Division
-const colors = {
+const colors: Record<DivisionName, string> = {
   Copper: "#b87333",
   Bronze: "#cd7f32",
   Silver: "#c0c0c0",
@@ -29,169 +39,119 @@ const colors = {
   "Ascendant Zero": "#ff0077",
 };
 
-// Divisionen berechnen
+// ----- Division ranges -----
 let cursor = 0;
 const divs = divisions.map((d) => {
   const span = d.tiers.reduce((a, b) => a + b, 0);
   const min = cursor;
   const max = cursor + span - 1;
   cursor = max + 1;
-  return { name: d.name, tiers: d.tiers, min, max };
+  return { ...d, min, max, span };
 });
 
-function pct(p: number, min: number, max: number): number {
-  if (p <= min) return 0;
-  if (p >= max) return 100;
-  return ((p - min) / (max - min)) * 100;
+const current =
+  divs.find((d) => points >= d.min && points <= d.max) ??
+  divs[divs.length - 1];
+
+const localPoints = Math.max(0, points - current.min);
+
+// ----- Text logic -----
+let infoText: string | null = null;
+let nextRankText: string | null = null;
+let ascendantText: string | null = null;
+
+if (points === 0) {
+  infoText = "Complete your 7 placement matches to be placed in a division.";
 }
 
-// aktuelle Division bestimmen
-const currentDiv = divs.find((d) => points >= d.min && points <= d.max) ?? divs[0];
+if (points > 0 && points < 10000) {
+  const idx = divs.findIndex((d) => d.name === current.name);
+  const next = divs[idx + 1];
+  if (next) {
+    const diff = next.min - points;
+    nextRankText = `+${diff.toLocaleString("de-DE")} points to reach ${next.name}`;
+  }
+}
+
+if (points > 0 && points < 8750) {
+  const diffAsc = 8750 - points;
+  ascendantText = `+${diffAsc.toLocaleString("de-DE")} points to reach Ascendant`;
+}
+
+if (points >= 10000) {
+  infoText =
+    "You are in Ascendant Zero. Win matches for a chance to earn this emblem.";
+}
+
+const showAscendantEmblem = points < 8750;
+const showAscendantZeroEmblem = points >= 10000;
 ---
 
 <div class="comp-rank-box">
-  <div class="comp-rank-header" id="comp-rank-toggle">
-    <h3>Competitive Division — {currentDiv.name}</h3>
-    <span class="toggle-hint">(Click to expand)</span>
+  <div class="comp-rank-header">
+    <h3>Competitive Division — {current.name}</h3>
   </div>
 
-  <div class="comp-rank-wrapper" id="comp-rank-wrapper">
-    {divs.map((division) => {
-      const color = colors[division.name as keyof typeof colors] || "#999";
-      const isCurrent = points >= division.min && points <= division.max;
-      const rightLabel = isCurrent
-        ? points + " / " + division.max
-        : points > division.max
-        ? division.max + " / " + division.max
-        : "—";
+  <div class="rank-points">
+    <span>{points.toLocaleString("de-DE")} / 15000</span>
+
+    {points < 10000 && (
+      <span class="rank-points-division">
+        {points.toLocaleString("de-DE")} / {current.max.toLocaleString("de-DE")}
+      </span>
+    )}
+  </div>
+
+  <div class="division-bar">
+    {current.tiers.map((tier, idx) => {
+      const segStart = current.tiers
+        .slice(0, idx)
+        .reduce((a, b) => a + b, 0);
+
+      let fill = 0;
+      if (localPoints > segStart) {
+        fill = Math.min(100, ((localPoints - segStart) / tier) * 100);
+      }
 
       return (
-        <div
-          class={"division-row" + (isCurrent ? " active" : "")}
-          data-division={division.name}
-        >
-          <div class="division-header">
-            <span class="division-name">{division.name}</span>
-            <span class="division-points">{rightLabel}</span>
-          </div>
-
-          <div class="division-bar">
-            {division.tiers.map((tier, idx) => {
-              const segMin =
-                division.min + division.tiers.slice(0, idx).reduce((a, b) => a + b, 0);
-              const segMax = segMin + tier;
-              const fill = pct(points, segMin, segMax);
-              const styleStr = "--fill:" + fill + "%;--color:" + color;
-
-              const tierName =
-                division.name === "Ascendant Zero"
-                  ? "Ascendant Zero"
-                  : division.name + " " + (["III", "II", "I"][idx] || "");
-
-              // Tooltip-Logik
-              let tooltipText = "";
-              if (division.name === "Ascendant Zero") {
-                // Sonderfall: keine Unterränge
-                const toMax = 15000 - points;
-                tooltipText = `${tierName} — ${points} / 15000 (+${toMax} to max)`;
-              } else if (points < segMin) {
-                // Noch nicht erreicht
-                const diff = segMin - points;
-                tooltipText = `${tierName} — Starts at ${segMin.toLocaleString("de-DE")} Points (+${diff.toLocaleString("de-DE")} to reach)`;
-              } else if (points >= segMin && points < segMax) {
-                // Aktueller Abschnitt
-                const toNext = segMax - points;
-                tooltipText = `${tierName} — ${points.toLocaleString("de-DE")} / ${segMax.toLocaleString("de-DE")} (+${toNext.toLocaleString("de-DE")} to next)`;
-              } else {
-                // Abgeschlossen
-                tooltipText = `${tierName} — reached (at ${segMax.toLocaleString("de-DE")})`;
-              }
-
-              return (
-                <div class="segment" data-tooltip={tooltipText}>
-                  <div class="segment-fill" style={styleStr}></div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div class="division-tiers">
-            {division.name !== "Ascendant Zero" && (
-              <>
-                <span>III</span><span>II</span><span>I</span>
-              </>
-            )}
-          </div>
+        <div class="segment">
+          <div
+            class="segment-fill"
+            style={`--fill:${fill}%;--color:${colors[current.name]}`}
+          ></div>
         </div>
       );
     })}
   </div>
 
-  <div class="rank-tooltip hidden" id="rank-tooltip"></div>
-</div>
+  {current.name !== "Ascendant Zero" && (
+    <div class="division-tiers">
+      <span>III</span>
+      <span>II</span>
+      <span>I</span>
+    </div>
+  )}
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const toggle = document.getElementById("comp-rank-toggle");
-    const wrapper = document.getElementById("comp-rank-wrapper");
-    const tooltip = document.getElementById("rank-tooltip");
+  {nextRankText && <div class="rank-next">{nextRankText}</div>}
+  {ascendantText && <div class="rank-ascendant">{ascendantText}</div>}
+  {infoText && <div class="rank-info">{infoText}</div>}
 
-    if (!toggle || !wrapper || !tooltip) return;
+  {(showAscendantEmblem || showAscendantZeroEmblem) && (
+    <div class="rank-emblem">
+      <div class="rank-emblem-text">
+        {showAscendantZeroEmblem
+          ? "Ascendant Zero Emblem"
+          : "Reach Ascendant this season to earn this emblem."}
+      </div>
 
-    // Nur aktuelle Division initial anzeigen
-    const allRows = wrapper.querySelectorAll(".division-row");
-    allRows.forEach((row) => {
-      const el = row as HTMLElement;
-      if (!el.classList.contains("active")) {
-        el.style.maxHeight = "0px";
-        el.style.opacity = "0";
-        el.style.overflow = "hidden";
-      }
-    });
-
-    // Expandieren / einklappen
-    toggle.addEventListener("click", () => {
-      wrapper.classList.toggle("expanded");
-      const expanded = wrapper.classList.contains("expanded");
-
-      allRows.forEach((row) => {
-        const el = row as HTMLElement;
-        if (expanded) {
-          el.style.maxHeight = "200px";
-          el.style.opacity = "1";
-        } else if (!el.classList.contains("active")) {
-          el.style.maxHeight = "0px";
-          el.style.opacity = "0";
+      <img
+        src={
+          showAscendantZeroEmblem
+            ? "https://www.bungie.net/common/destiny2_content/icons/131a311fef76952e5929233a33a7155a.jpg"
+            : "https://www.bungie.net/common/destiny2_content/icons/49f1dffd918e5c772b83be9432d47f38.jpg"
         }
-      });
-    });
-
-    // Tooltip Hover
-    wrapper.addEventListener("mousemove", (e) => {
-      const evt = e;
-      const element = evt.target as HTMLElement;
-      if (!element) return;
-
-      const target = (element as HTMLElement).closest(".segment") as HTMLElement;
-      if (!target || !target.dataset.tooltip) {
-        tooltip.classList.add("hidden");
-        return;
-      }
-
-      tooltip.textContent = target.dataset.tooltip;
-      tooltip.classList.remove("hidden");
-
-      // Relativ zur Wrapper-Position
-      const rect = wrapper.getBoundingClientRect();
-      const x = evt.clientX - rect.left + 10;
-      const y = evt.clientY - rect.top + 10;
-
-      tooltip.style.left = `${x}px`;
-      tooltip.style.top = `${y}px`;
-    });
-
-    wrapper.addEventListener("mouseleave", () => {
-      tooltip.classList.add("hidden");
-    });
-  });
-</script>
+        alt="Competitive Emblem"
+      />
+    </div>
+  )}
+</div>
