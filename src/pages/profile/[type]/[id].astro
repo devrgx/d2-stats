@@ -13,42 +13,15 @@ const { type, id } = Astro.params;
 
 const membershipType = Number(type);
 const membershipId = id;
-const apiKey = import.meta.env.BUNGIE_API_KEY;
 
-// ===== SSR FALLBACKS =====
+// ===== SSR FALLBACKS (schnell rendern) =====
 const playerName = "Loading Guardian";
 const bungieTag = "";
 
 const emblemBackground = "/missing_emblem_special.jpg";
 const emblemIcon = "/missing_emblem_icon.png";
 
-// ===== COMP (ALT & FUNKTIONIEREND, SSR) =====
-let compPoints = 0;
-let compProgressToNext = 0;
-let compNextLevelAt = 0;
-
-try {
-  const res = await fetch(
-    `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=100,200,202,900`,
-    { headers: { "X-API-Key": apiKey } }
-  );
-
-  const data = await res.json();
-  const progressions = data?.Response?.characterProgressions?.data ?? {};
-  const firstCharProg = Object.values(progressions)[0] as any;
-  const firstProg = firstCharProg?.progressions ?? {};
-  const compProg = firstProg["3696598664"];
-
-  if (compProg) {
-    compPoints = compProg.currentProgress ?? 0;
-    compProgressToNext = compProg.progressToNextLevel ?? 0;
-    compNextLevelAt = compProg.nextLevelAt ?? 0;
-  }
-} catch (e) {
-  console.error("COMP SSR failed", e);
-}
-
-// ===== BADGES =====
+// ===== BADGES (lokal, schnell) =====
 const userBadges = membershipId
   ? getUserBadges(membershipId)
       .slice()
@@ -68,7 +41,8 @@ const userBadges = membershipId
     <div class="cc-header__scrim"></div>
 
     <div class="cc-header__inner">
-      <div class="cc-header__icon skeleton skeleton-avatar" data-skel-avatar></div>
+      <div class="cc-header__icon skeleton skeleton-avatar" data-skel-avatar>
+      </div>
 
       <img
         src={emblemIcon}
@@ -85,13 +59,15 @@ const userBadges = membershipId
           <span data-profile-name>{playerName}</span>
           <span class="cc-header__tag" data-profile-tag>{bungieTag}</span>
 
-          {userBadges.length > 0 && (
-            <section class="profile-badges">
-              {userBadges.map((b) => (
-                <BadgePill badge={b} />
-              ))}
-            </section>
-          )}
+          {
+            userBadges.length > 0 && (
+              <section class="profile-badges">
+                {userBadges.map((b) => (
+                  <BadgePill badge={b} />
+                ))}
+              </section>
+            )
+          }
         </h2>
 
         <div class="cc-header__meta">
@@ -112,11 +88,13 @@ const userBadges = membershipId
       <h2>Trials of Osiris</h2>
 
       <div class="grid">
-        {Array.from({ length: 4 }).map(() => (
-          <div class="col-3" data-skel-trials>
-            <div class="skeleton skeleton-card" />
-          </div>
-        ))}
+        {
+          Array.from({ length: 4 }).map(() => (
+            <div class="col-3" data-skel-trials>
+              <div class="skeleton skeleton-card" />
+            </div>
+          ))
+        }
 
         <div class="col-3" data-real-trials style="display:none;">
           <StatBlock label="Weekly KD" value="—" />
@@ -137,11 +115,13 @@ const userBadges = membershipId
       <h2>Competitive / Crucible</h2>
 
       <div class="grid">
-        {Array.from({ length: 3 }).map(() => (
-          <div class="col-4" data-skel-crucible>
-            <div class="skeleton skeleton-card" />
-          </div>
-        ))}
+        {
+          Array.from({ length: 3 }).map(() => (
+            <div class="col-4" data-skel-crucible>
+              <div class="skeleton skeleton-card" />
+            </div>
+          ))
+        }
 
         <div class="col-4" data-real-crucible style="display:none;">
           <StatBlock label="Overall KD" value="—" />
@@ -155,14 +135,14 @@ const userBadges = membershipId
       </div>
 
       <div style="margin-top:20px;">
-        <div class="skeleton skeleton-card" style="height:64px;" data-skel-rank></div>
+        <!-- Skeleton bleibt bis Comp geladen -->
+        <div class="skeleton skeleton-card" style="height:64px;" data-skel-rank>
+        </div>
 
-        <!-- ✅ COMP WIE FRÜHER -->
-        <CompRankBars
-          points={compPoints}
-          nextLevelAt={compNextLevelAt}
-          toNext={compProgressToNext}
-        />
+        <!-- Wichtig: Komponente bleibt drin (lädt CSS), aber wird ersetzt -->
+        <div data-comp-host>
+          <CompRankBars points={0} />
+        </div>
       </div>
     </section>
   </main>
@@ -173,31 +153,210 @@ const userBadges = membershipId
     const membershipType = header?.dataset.membershipType;
     const membershipId = header?.dataset.membershipId;
 
+    const compHost = document.querySelector("[data-comp-host]");
+    const compSkel = document.querySelector("[data-skel-rank]");
+
     function finish() {
       document.querySelector("[data-skel-avatar]")?.remove();
       document.querySelector("[data-skel-title]")?.remove();
       document.querySelector("[data-skel-meta]")?.remove();
-      document.querySelector("[data-skel-rank]")?.remove();
 
-      document.querySelectorAll("[data-skel-trials]").forEach(e => e.remove());
-      document.querySelectorAll("[data-real-trials]").forEach(e => e.style.display = "");
+      document
+        .querySelectorAll("[data-skel-trials]")
+        .forEach((e) => e.remove());
+      document
+        .querySelectorAll("[data-real-trials]")
+        .forEach((e) => (e.style.display = ""));
 
-      document.querySelectorAll("[data-skel-crucible]").forEach(e => e.remove());
-      document.querySelectorAll("[data-real-crucible]").forEach(e => e.style.display = "");
+      document
+        .querySelectorAll("[data-skel-crucible]")
+        .forEach((e) => e.remove());
+      document
+        .querySelectorAll("[data-real-crucible]")
+        .forEach((e) => (e.style.display = ""));
 
-      document.querySelector("[data-meta-platform]")?.style.setProperty("display", "");
+      document
+        .querySelector("[data-meta-platform]")
+        ?.style.setProperty("display", "");
     }
 
-    async function run() {
+    // 1:1 Markup wie CompRankBars.astro
+    function renderCompRank(points) {
+      points = Number(points) || 0;
+      const isUntested = points === 0;
+
+      const divisions = [
+        { name: "Copper", tiers: [250, 500, 500] },
+        { name: "Bronze", tiers: [500, 500, 500] },
+        { name: "Silver", tiers: [500, 500, 500] },
+        { name: "Gold", tiers: [500, 500, 500] },
+        { name: "Platinum", tiers: [500, 500, 500] },
+        { name: "Adept", tiers: [500, 500, 500] },
+        { name: "Ascendant", tiers: [500, 500, 250] },
+        { name: "Ascendant Zero", tiers: [5000] },
+      ];
+
+      const colors = {
+        Copper: "#b87333",
+        Bronze: "#cd7f32",
+        Silver: "#c0c0c0",
+        Gold: "#ffd700",
+        Platinum: "#4fd1c5",
+        Adept: "#8a2be2",
+        Ascendant: "#00d1ff",
+        "Ascendant Zero": "#ff0077",
+      };
+
+      let cursor = 0;
+      const divs = divisions.map((d) => {
+        const span = d.tiers.reduce((a, b) => a + b, 0);
+        const min = cursor;
+        const max = cursor + span - 1;
+        cursor = max + 1;
+        return { ...d, min, max, span };
+      });
+
+      const current =
+        divs.find((d) => points >= d.min && points <= d.max) ??
+        divs[divs.length - 1];
+
+      const localPoints = Math.max(0, points - current.min);
+
+      let infoText = null;
+      let nextRankText = null;
+      let ascendantText = null;
+
+      if (isUntested) {
+        infoText =
+          "Complete your 7 placement matches to be placed in a division.";
+      }
+
+      if (!isUntested && points > 0 && points < 10000) {
+        const idx = divs.findIndex((d) => d.name === current.name);
+        const next = divs[idx + 1];
+        if (next) {
+          const diff = next.min - points;
+          nextRankText = `+${diff.toLocaleString("de-DE")} points to reach ${next.name}`;
+        }
+      }
+
+      if (!isUntested && points > 0 && points < 8750) {
+        const diffAsc = 8750 - points;
+        ascendantText = `+${diffAsc.toLocaleString("de-DE")} points to reach Ascendant`;
+      }
+
+      if (points >= 10000) {
+        infoText =
+          "You are in Ascendant Zero. Win matches for a chance to earn this emblem.";
+      }
+
+      const showAscendantEmblem = points < 8750; // darf bei 0 gerne true bleiben (wie du willst)
+      const showAscendantZeroEmblem = points >= 10000;
+
+      // Segmente nur, wenn NICHT untested
+      const segments = !isUntested
+        ? current.tiers
+            .map((tier, idx) => {
+              const segStart = current.tiers
+                .slice(0, idx)
+                .reduce((a, b) => a + b, 0);
+
+              let fill = 0;
+              if (localPoints > segStart) {
+                fill = Math.min(100, ((localPoints - segStart) / tier) * 100);
+              }
+
+              return `
+            <div class="segment">
+              <div class="segment-fill" style="--fill:${fill}%;--color:${colors[current.name]}"></div>
+            </div>
+          `;
+            })
+            .join("")
+        : "";
+
+      return `
+    <div class="comp-rank-box">
+      <div class="comp-rank-header">
+        <h3>Competitive Division — ${isUntested ? "Untested" : current.name}</h3>
+      </div>
+
+      <div class="rank-points">
+        <span>${points.toLocaleString("de-DE")} / 15000</span>
+        ${
+          !isUntested && points < 10000
+            ? `<span class="rank-points-division">${points.toLocaleString("de-DE")} / ${current.max.toLocaleString("de-DE")}</span>`
+            : ""
+        }
+      </div>
+
+      ${!isUntested ? `<div class="division-bar">${segments}</div>` : ""}
+
+      ${
+        !isUntested && current.name !== "Ascendant Zero"
+          ? `<div class="division-tiers"><span>III</span><span>II</span><span>I</span></div>`
+          : ""
+      }
+
+      ${nextRankText ? `<div class="rank-next">${nextRankText}</div>` : ""}
+      ${ascendantText ? `<div class="rank-ascendant">${ascendantText}</div>` : ""}
+      ${infoText ? `<div class="rank-info">${infoText}</div>` : ""}
+
+      ${
+        showAscendantEmblem || showAscendantZeroEmblem
+          ? `<div class="rank-emblem">
+              <div class="rank-emblem-text">
+                ${
+                  showAscendantZeroEmblem
+                    ? "Ascendant Zero Emblem"
+                    : "Reach Ascendant this season to earn this emblem."
+                }
+              </div>
+              <img
+                src="${
+                  showAscendantZeroEmblem
+                    ? "https://www.bungie.net/common/destiny2_content/icons/131a311fef76952e5929233a33a7155a.jpg"
+                    : "https://www.bungie.net/common/destiny2_content/icons/49f1dffd918e5c772b83be9432d47f38.jpg"
+                }"
+                alt="Competitive Emblem"
+              />
+            </div>`
+          : ""
+      }
+    </div>
+  `;
+    }
+
+    async function loadCompFirst() {
+      try {
+        const res = await fetch(
+          `/api/comp?type=${membershipType}&id=${membershipId}`
+        );
+        const data = await res.json();
+        if (!res.ok)
+          throw new Error(data?.error || `Comp failed (${res.status})`);
+
+        const points = typeof data?.points === "number" ? data.points : 0;
+
+        // Ersetze Inhalt im Host (CSS bleibt, weil CompRankBars-Komponente/CSS eingebunden ist)
+        compHost.innerHTML = renderCompRank(points);
+      } catch (e) {
+        console.error("Comp hydrate failed:", e);
+      } finally {
+        compSkel?.remove();
+      }
+    }
+
+    async function hydrateProfile() {
       try {
         const res = await fetch(
           `/api/profile?type=${membershipType}&id=${membershipId}`
         );
-        if (!res.ok) throw new Error(res.status);
-
         const data = await res.json();
-        const profile = data.profile;
-        const clan = data.clan;
+        if (!res.ok)
+          throw new Error(data?.error || `Profile failed (${res.status})`);
+
+        const profile = data?.profile;
 
         const user = profile?.profile?.data?.userInfo;
         const name = user?.bungieGlobalDisplayName ?? "Unknown Guardian";
@@ -207,6 +366,7 @@ const userBadges = membershipId
         document.querySelector("[data-profile-name]").textContent = name;
         document.querySelector("[data-profile-tag]").textContent = tag;
 
+        // Emblem kommt jetzt korrekt über Hash-Resolution aus /api/profile (data.emblem)
         if (data?.emblem?.background) {
           header.style.backgroundImage = `url('${data.emblem.background}')`;
         }
@@ -217,17 +377,27 @@ const userBadges = membershipId
           img.style.display = "";
         }
 
-        if (clan?.name) {
+        if (data?.clan?.name) {
           const el = document.querySelector("[data-meta-clan]");
-          el.innerHTML = `${clan.tag ? `<strong>[${clan.tag}]</strong> ` : ""}${clan.name}`;
+          el.innerHTML = `${data.clan.tag ? `<strong>[${data.clan.tag}]</strong> ` : ""}${data.clan.name}`;
           el.style.display = "";
           document.querySelector("[data-meta-sep]").style.display = "";
         }
       } catch (e) {
-        console.error("hydrate failed", e);
+        console.error("Profile hydrate failed:", e);
       } finally {
         finish();
       }
+    }
+
+    async function run() {
+      if (!membershipType || !membershipId) return;
+
+      // WICHTIG: wie von dir gefordert – Comp zuerst
+      await loadCompFirst();
+
+      // Danach Header/Clan/Emblem
+      await hydrateProfile();
     }
 
     run();

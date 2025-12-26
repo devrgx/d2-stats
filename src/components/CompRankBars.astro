@@ -14,6 +14,8 @@ type DivisionName =
 
 const { points = 0 } = Astro.props;
 
+const isUntested = points === 0;
+
 const divisions: {
   name: DivisionName;
   tiers: number[];
@@ -50,8 +52,7 @@ const divs = divisions.map((d) => {
 });
 
 const current =
-  divs.find((d) => points >= d.min && points <= d.max) ??
-  divs[divs.length - 1];
+  divs.find((d) => points >= d.min && points <= d.max) ?? divs[divs.length - 1];
 
 const localPoints = Math.max(0, points - current.min);
 
@@ -89,69 +90,80 @@ const showAscendantZeroEmblem = points >= 10000;
 
 <div class="comp-rank-box">
   <div class="comp-rank-header">
-    <h3>Competitive Division — {current.name}</h3>
+    <h3>Competitive Division — {isUntested ? "Untested" : current.name}</h3>
   </div>
 
   <div class="rank-points">
     <span>{points.toLocaleString("de-DE")} / 15000</span>
 
-    {points < 10000 && (
-      <span class="rank-points-division">
-        {points.toLocaleString("de-DE")} / {current.max.toLocaleString("de-DE")}
-      </span>
-    )}
+    {
+      !isUntested && points < 10000 && (
+        <span class="rank-points-division">
+          {points.toLocaleString("de-DE")} /{" "}
+          {current.max.toLocaleString("de-DE")}
+        </span>
+      )
+    }
   </div>
 
-  <div class="division-bar">
-    {current.tiers.map((tier, idx) => {
-      const segStart = current.tiers
-        .slice(0, idx)
-        .reduce((a, b) => a + b, 0);
+  {
+    !isUntested && (
+      <div class="division-bar">
+        {current.tiers.map((tier, idx) => {
+          const segStart = current.tiers
+            .slice(0, idx)
+            .reduce((a, b) => a + b, 0);
 
-      let fill = 0;
-      if (localPoints > segStart) {
-        fill = Math.min(100, ((localPoints - segStart) / tier) * 100);
-      }
+          let fill = 0;
+          if (localPoints > segStart) {
+            fill = Math.min(100, ((localPoints - segStart) / tier) * 100);
+          }
 
-      return (
-        <div class="segment">
-          <div
-            class="segment-fill"
-            style={`--fill:${fill}%;--color:${colors[current.name]}`}
-          ></div>
-        </div>
-      );
-    })}
-  </div>
+          return (
+            <div class="segment">
+              <div
+                class="segment-fill"
+                style={`--fill:${fill}%;--color:${colors[current.name]}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    )
+  }
 
-  {current.name !== "Ascendant Zero" && (
-    <div class="division-tiers">
-      <span>III</span>
-      <span>II</span>
-      <span>I</span>
-    </div>
-  )}
+  {
+    !isUntested && current.name !== "Ascendant Zero" && (
+      <div class="division-tiers">
+        <span>III</span>
+        <span>II</span>
+        <span>I</span>
+      </div>
+    )
+  }
 
   {nextRankText && <div class="rank-next">{nextRankText}</div>}
   {ascendantText && <div class="rank-ascendant">{ascendantText}</div>}
   {infoText && <div class="rank-info">{infoText}</div>}
 
-  {(showAscendantEmblem || showAscendantZeroEmblem) && (
-    <div class="rank-emblem">
-      <div class="rank-emblem-text">
-        {showAscendantZeroEmblem
-          ? "Ascendant Zero Emblem"
-          : "Reach Ascendant this season to earn this emblem."}
-      </div>
+  {
+    (showAscendantEmblem || showAscendantZeroEmblem) && (
+      <div class="rank-emblem">
+        <div class="rank-emblem-text">
+          {showAscendantZeroEmblem
+            ? "Ascendant Zero Emblem"
+            : "Reach Ascendant this season to earn this emblem."}
+        </div>
 
-      <img
-        src={
-          showAscendantZeroEmblem
-            ? "https://www.bungie.net/common/destiny2_content/icons/131a311fef76952e5929233a33a7155a.jpg"
-            : "https://www.bungie.net/common/destiny2_content/icons/49f1dffd918e5c772b83be9432d47f38.jpg"
-        }
-        alt="Competitive Emblem"
-      />
-    </div>
-  )}
+        <img
+          src={
+            showAscendantZeroEmblem
+              ? "https://www.bungie.net/common/destiny2_content/icons/131a311fef76952e5929233a33a7155a.jpg"
+              : "https://www.bungie.net/common/destiny2_content/icons/49f1dffd918e5c772b83be9432d47f38.jpg"
+          }
+          alt="Competitive Emblem"
+        />
+      </div>
+    )
+  }
 </div>

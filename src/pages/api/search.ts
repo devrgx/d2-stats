@@ -1,32 +1,83 @@
 import type { APIRoute } from "astro";
 
+/* ============================================================
+   Types
+============================================================ */
+
 type SearchResult = {
   displayName: string;
   membershipType: number;
   membershipId: string;
 };
 
-async function runSearch(query: string): Promise<SearchResult[]> {
-  const apiKey = import.meta.env.BUNGIE_API_KEY;
-  if (!apiKey) return [];
+type BungieEnvelope<T> = {
+  Response?: T;
+  ErrorCode?: number;
+  Message?: string;
+  ThrottleSeconds?: number;
+};
 
+/* ============================================================
+   Helpers
+============================================================ */
+
+function getApiKey(): string {
+  const key = process.env.BUNGIE_API_KEY ?? import.meta.env.BUNGIE_API_KEY;
+  if (!key || !key.trim()) {
+    throw new Error("BUNGIE_API_KEY is missing (check .env and restart dev server)");
+  }
+  return key.trim();
+}
+
+async function bungieFetch<T>(
+  url: string,
+  apiKey: string,
+  init: RequestInit
+): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "X-API-Key": apiKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const data = (await res.json()) as BungieEnvelope<T>;
+
+  if (!res.ok || (typeof data.ErrorCode === "number" && data.ErrorCode !== 1)) {
+    throw new Error(
+      `Bungie API error (http=${res.status}, code=${data.ErrorCode}): ${data.Message}`
+    );
+  }
+
+  return data.Response as T;
+}
+
+/* ============================================================
+   Search Logic
+============================================================ */
+
+async function runSearch(query: string): Promise<SearchResult[]> {
+  const apiKey = getApiKey();
   const q = query.trim();
+
   if (q.length < 2) return [];
 
-  // === Pfad A: Vollständiger Name (name#code)
+  /* ---------- Case A: Exact Bungie Name (name#1234) ---------- */
   if (q.includes("#")) {
-    const [name, rawCode] = q.split("#");
+    const [nameRaw, rawCode] = q.split("#");
+    const name = nameRaw?.trim();
     const code = Number(rawCode);
+
     if (!name || !Number.isFinite(code)) return [];
 
-    const res = await fetch(
+    const players = await bungieFetch<any[]>(
       "https://www.bungie.net/Platform/Destiny2/SearchDestinyPlayerByBungieName/All/",
+      apiKey,
       {
         method: "POST",
-        headers: {
-          "X-API-Key": apiKey,
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           displayName: name,
           displayNameCode: code,
@@ -34,87 +85,96 @@ async function runSearch(query: string): Promise<SearchResult[]> {
       }
     );
 
-    const data = await res.json();
-    const list = Array.isArray(data?.Response) ? data.Response : [];
-
-    return list.map((p: any) => ({
+    return players.map((p) => ({
       displayName: `${p.bungieGlobalDisplayName}#${p.bungieGlobalDisplayNameCode}`,
       membershipType: p.membershipType,
       membershipId: String(p.membershipId),
     }));
   }
 
-  // === Pfad B: Prefix-Suche
-  const res = await fetch(
+  /* ---------- Case B: Prefix Search ---------- */
+  const response = await bungieFetch<{ searchResults: any[] }>(
     "https://www.bungie.net/Platform/User/Search/GlobalName/0/",
+    apiKey,
     {
       method: "POST",
-      headers: {
-        "X-API-Key": apiKey,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ displayNamePrefix: q }),
     }
   );
 
-  const data = await res.json();
-  const results = Array.isArray(data?.Response?.searchResults)
-    ? data.Response.searchResults
+  const results = Array.isArray(response.searchResults)
+    ? response.searchResults
     : [];
 
   const flattened: SearchResult[] = [];
 
   for (const r of results) {
-    const name = `${r.bungieGlobalDisplayName}#${r.bungieGlobalDisplayNameCode}`;
+    const displayName = `${r.bungieGlobalDisplayName}#${r.bungieGlobalDisplayNameCode}`;
     const memberships = Array.isArray(r.destinyMemberships)
       ? r.destinyMemberships
       : [];
 
-    let pick =
-      memberships.find((m: { isCrossSavePrimary: any; }) => m.isCrossSavePrimary)
-      || memberships.find((m: { crossSaveOverride: any; membershipType: any; }) => m.crossSaveOverride === m.membershipType)
-      || memberships.find((m: { membershipType: number; }) => m.membershipType === 3) // Steam bevorzugen
-      || memberships[0];
+    const pick =
+      memberships.find((m: any) => m.isCrossSavePrimary) ||
+      memberships.find((m: any) => m.crossSaveOverride === m.membershipType) ||
+      memberships.find((m: any) => m.membershipType === 3) ||
+      memberships[0];
 
     if (pick?.membershipId && pick?.membershipType != null) {
       flattened.push({
-        displayName: name,
+        displayName,
         membershipType: pick.membershipType,
         membershipId: String(pick.membershipId),
       });
     }
   }
 
+  // Deduplicate by membershipId
   return Array.from(
-    new Map(flattened.map((x) => [x.membershipId, x])).values()
+    new Map(flattened.map((p) => [p.membershipId, p])).values()
   ).slice(0, 10);
 }
 
-/* ===================== GET ===================== */
+/* ============================================================
+   GET /api/search?q=...
+============================================================ */
+
 export const GET: APIRoute = async ({ url }) => {
   try {
     const query = url.searchParams.get("q") ?? "";
     const results = await runSearch(query);
+
     return new Response(JSON.stringify(results), {
       headers: { "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("search GET error:", err);
-    return new Response(JSON.stringify([]), { status: 500 });
+  } catch (err: any) {
+    console.error("SEARCH GET ERROR:", err.message);
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 };
 
-/* ===================== POST ===================== */
+/* ============================================================
+   POST /api/search
+   body: { query: string }
+============================================================ */
+
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const query = typeof body?.query === "string" ? body.query : "";
     const results = await runSearch(query);
+
     return new Response(JSON.stringify(results), {
       headers: { "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("search POST error:", err);
-    return new Response(JSON.stringify([]), { status: 500 });
+  } catch (err: any) {
+    console.error("SEARCH POST ERROR:", err.message);
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 };
